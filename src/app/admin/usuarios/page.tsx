@@ -89,7 +89,7 @@ export default function AdminUsuariosPage() {
                   <div className="flex flex-col">
                     <span className="text-sm font-bold text-stone-900 uppercase">{perfil.nome}</span>
                     <div className="flex items-center gap-2 mt-1">
-                      <Badge variant={perfil.nivel_acesso === 'admin' ? 'info' : 'secondary'}>
+                      <Badge variant={perfil.nivel_acesso === 'admin' ? 'info' : 'default'}>
                         {perfil.nivel_acesso}
                       </Badge>
                       {!perfil.ativo && (
