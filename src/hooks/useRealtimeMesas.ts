@@ -13,6 +13,7 @@ export interface Mesa {
   // Esses campos viriam de um join com comandas abertas
   total_parcial?: number;
   aberta_em?: string;
+  cliente_nome?: string;
 }
 
 export function useRealtimeMesas() {
