@@ -27,7 +27,7 @@ export default function ComandaDetalhesPage() {
         comanda_id: comanda.id,
         produto_id: item.produto_id,
         quantidade: item.quantidade,
-        preco_unitario_congelado: item.preco_unitario,
+        preco_unitario_congelado: item.preco_unitario, // Agora garantido no banco
         observacao: item.observacao,
         criado_por: user.id
       }));
@@ -36,13 +36,16 @@ export default function ComandaDetalhesPage() {
         .from('itens_pedido')
         .insert(pedidosParaInserir);
 
-      if (error) throw error;
+      if (error) {
+        alert('ERRO AO ENVIAR: ' + error.message);
+        return;
+      }
       
       limparCarrinho();
       alert('PEDIDO ENVIADO!');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao enviar pedido:', err);
-      alert('ERRO AO ENVIAR.');
+      alert('ERRO NO SISTEMA: ' + err.message);
     }
   };
 
@@ -55,7 +58,10 @@ export default function ComandaDetalhesPage() {
         .update({ status: 'fechando' })
         .eq('id', comanda.id);
 
-      if (error) throw error;
+      if (error) {
+        alert('ERRO AO FECHAR: ' + error.message);
+        return;
+      }
 
       const { error: mesaError } = await supabase
         .from('mesas')
@@ -64,31 +70,43 @@ export default function ComandaDetalhesPage() {
 
       if (mesaError) throw mesaError;
       
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erro ao solicitar fechamento:', err);
     }
   };
 
   const handleAbrirMesa = async () => {
-    if (!user) return;
+    if (!user) {
+      alert('ERRO: USUÁRIO NÃO IDENTIFICADO. REFAÇA O LOGIN.');
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('comandas')
         .insert({
           mesa_id: mesaId,
           garcom_id: user.id,
-          status_pagamento: 'Pendente'
+          status_pagamento: 'Pendente' // Agora garantido no banco
         });
 
-      if (error) throw error;
+      if (error) {
+        alert('ERRO AO ABRIR COMANDA: ' + error.message);
+        return;
+      }
 
-      await supabase
+      const { error: mesaError } = await supabase
         .from('mesas')
         .update({ status: 'ocupada' })
         .eq('id', mesaId);
 
-    } catch (err) {
+      if (mesaError) {
+        alert('ERRO AO ATUALIZAR MESA: ' + mesaError.message);
+      }
+
+    } catch (err: any) {
       console.error('Erro ao abrir mesa:', err);
+      alert('ERRO DE CONEXÃO: ' + err.message);
     }
   };
 
