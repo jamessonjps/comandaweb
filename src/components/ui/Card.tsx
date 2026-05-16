@@ -11,11 +11,7 @@ export const Card = ({ children, className = '', onClick, hoverable = true }: Ca
   return (
     <div 
       onClick={onClick}
-      className={`
-        bg-bg-surface border border-border rounded-2xl p-4 shadow-card
-        ${hoverable ? 'transition-all hover:bg-bg-elevated hover:border-accent/30 cursor-pointer active:scale-[0.99]' : ''}
-        ${className}
-      `}
+      className={`woodcut-card ${hoverable ? 'hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all' : ''} ${className}`}
     >
       {children}
     </div>

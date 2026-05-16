@@ -11,66 +11,86 @@
   --accent:      #EAB308;
   --accent-dim:  #92710A;
   --success:     #22C55E;
-  --danger:      #EF4444;
-  --warning:     #F97316;
-  --info:        #3B82F6;
+  /* Paleta Bistrô Vintage - Mangueirão */
+  --background: #FFFBEB; /* bg-amber-50 */
+  --surface: #FEF3C7;    /* bg-amber-100 */
+  --foreground: #451A03; /* text-amber-950 (Chocolate Profundo) */
+  
+  --primary: #451A03;
+  --primary-foreground: #FFFBEB;
+  
+  --accent: #D97706;     /* Amarelo Mostarda */
+  --accent-foreground: #451A03;
 
-  /* Texto */
-  --text-primary:   #F4F4F5;
-  --text-secondary: #A1A1AA;
-  --text-muted:     #52525B;
+  --success: #65A30D;    /* Verde Pálido/Oliva */
+  --danger: #991B1B;     /* Vermelho Ferrugem */
+  --warning: #D97706;
 
-  /* Bordas & Sombras */
-  --border:         rgba(255,255,255,0.08);
-  --shadow-card:    0 4px 24px rgba(0,0,0,0.4);
-  --shadow-fab:     0 8px 32px rgba(234,179,8,0.3);
+  --border: #451A03;
+  --ring: #451A03;
 
-  /* Touch targets */
-  --touch-min: 44px;
-
-  /* Raios */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 20px;
-
-  --background: var(--bg-base);
-  --foreground: var(--text-primary);
+  --radius: 0px; /* Estilo artesanal prefere cantos retos ou muito orgânicos */
 }
 
-@theme {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-accent: var(--accent);
-  --color-surface: var(--bg-surface);
-  --color-elevated: var(--bg-elevated);
-  --color-success: var(--success);
-  --color-danger: var(--danger);
-  --color-warning: var(--warning);
-  --color-info: var(--info);
+@layer base {
+  body {
+    @apply bg-amber-50 text-amber-950 font-serif;
+    font-feature-settings: "kern" 1;
+    background-image: url("https://www.transparenttextures.com/patterns/paper.png"); /* Textura sutil de papel antigo */
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-bold uppercase tracking-tight;
+    font-family: 'Vidaloka', serif;
+  }
 }
 
-body {
-  background-color: var(--bg-base);
-  color: var(--text-primary);
-  font-family: 'Inter', sans-serif;
-  min-height: 100vh;
-  -webkit-tap-highlight-color: transparent;
+@layer components {
+  /* Efeito de Gravura / Woodcut */
+  .woodcut-border {
+    border: 2px solid var(--border);
+    box-shadow: 3px 3px 0px 0px var(--border);
+    position: relative;
+  }
+
+  .woodcut-button {
+    @apply px-6 py-3 font-display font-bold uppercase tracking-widest transition-all active:translate-y-1 active:shadow-none;
+    border: 2px solid var(--border);
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    box-shadow: 4px 4px 0px 0px #78350F;
+  }
+
+  .woodcut-card {
+    @apply p-6 bg-amber-100 border-2 border-amber-950;
+    box-shadow: 6px 6px 0px 0px rgba(69, 26, 3, 0.1);
+    background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(69, 26, 3, 0.03) 10px, rgba(69, 26, 3, 0.03) 11px);
+  }
+
+  /* Hachuras (Cross-hatching) */
+  .hatch-pattern {
+    background-image: radial-gradient(var(--border) 0.5px, transparent 0.5px);
+    background-size: 4px 4px;
+  }
 }
 
-/* Custom Scrollbar for Premium Feel */
+.font-display {
+  font-family: 'Vidaloka', serif;
+}
+
+.font-serif {
+  font-family: 'Averia Serif Libre', serif;
+}
+
+/* Custom Scrollbar Vintage */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-base);
+  @apply bg-amber-100;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--bg-elevated);
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+  @apply bg-amber-950 rounded-none;
 }

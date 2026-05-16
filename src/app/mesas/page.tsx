@@ -3,59 +3,49 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { AppHeader } from '@/components/layout/AppHeader';
-import { BottomNav } from '@/components/layout/BottomNav';
-import { MesaCard } from '@/components/mesas/MesaCard';
 import { useRealtimeMesas } from '@/hooks/useRealtimeMesas';
-import { WifiOff, Loader2, Search } from 'lucide-react';
+import { useAuthStore } from '@/store/useAuthStore';
+import { UtensilsIcon, Search, Receipt } from 'lucide-react';
 
 export default function MesasPage() {
-  const { mesas, isLoading, connectionStatus } = useRealtimeMesas();
+  const { mesas, isLoading } = useRealtimeMesas();
   const router = useRouter();
+  const user = useAuthStore((state) => state.user);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-bg-base flex items-center justify-center">
-        <Loader2 className="animate-spin text-accent" size={32} />
+      <div className="min-h-screen bg-amber-50 flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-amber-950 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-bg-base pb-32">
-      <AppHeader title="Mesas" />
-      
-      {/* Barra de Status de Conexão */}
-      {connectionStatus !== 'online' && (
-        <div className="bg-danger/20 text-danger text-[10px] font-bold uppercase tracking-widest py-1 flex items-center justify-center gap-2">
-          <WifiOff size={12} />
-          <span>Modo Offline - Tentando reconectar...</span>
-        </div>
-      )}
+    <div className="min-h-screen bg-amber-50 pb-20 font-serif">
+      <AppHeader title="Mapa de Mesas" />
 
-      <main className="px-6 py-6 flex flex-col gap-6">
-        {/* Filtros / Busca Simples */}
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-muted" size={18} />
-          <input 
-            type="text" 
-            placeholder="Buscar mesa ou setor..." 
-            className="w-full bg-bg-surface border border-border rounded-xl py-3 pl-12 pr-4 text-sm text-text-primary focus:outline-none focus:border-accent/50 transition-colors"
-          />
-        </div>
-
-        {/* Grid de Mesas */}
-        <div className="grid grid-cols-2 gap-4">
+      <main className="px-6 py-8">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
           {mesas.map((mesa) => (
-            <MesaCard
+            <div
               key={mesa.id}
-              numero={mesa.numero}
-              status={mesa.status}
-              capacidade={mesa.capacidade}
-              setor={mesa.setor}
-              totalParcial={mesa.total_parcial}
-              abertaEm={mesa.aberta_em}
               onClick={() => router.push(`/mesas/${mesa.id}`)}
-            />
+              className="woodcut-card flex flex-col items-center justify-center gap-4 aspect-square active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer group"
+            >
+              <div className="relative">
+                <div className={`w-16 h-16 rounded-full border-2 border-amber-950 flex items-center justify-center font-display font-black text-2xl
+                  ${mesa.status === 'livre' ? 'bg-green-100' : mesa.status === 'ocupada' ? 'bg-red-100' : 'bg-yellow-100'}`}
+                >
+                  {mesa.id}
+                </div>
+                <div className={`absolute -top-1 -right-1 w-4 h-4 rounded-full border-2 border-amber-950
+                  ${mesa.status === 'livre' ? 'bg-green-600' : mesa.status === 'ocupada' ? 'bg-red-600' : 'bg-yellow-500'}`} 
+                />
+              </div>
+              <span className="font-display font-black text-xs uppercase tracking-widest text-amber-900">
+                {mesa.status}
+              </span>
+            </div>
           ))}
         </div>
       </main>

@@ -27,7 +27,7 @@ export default function ComandaDetalhesPage() {
         comanda_id: comanda.id,
         produto_id: item.produto_id,
         quantidade: item.quantidade,
-        preco_unitario: item.preco_unitario,
+        preco_unitario_congelado: item.preco_unitario,
         observacao: item.observacao,
         criado_por: user.id
       }));

@@ -5,19 +5,20 @@ type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'default';
 interface BadgeProps {
   children: React.ReactNode;
   variant?: BadgeVariant;
+  className?: string;
 }
 
-export const Badge = ({ children, variant = 'default' }: BadgeProps) => {
+export const Badge = ({ children, variant = 'default', className = '' }: BadgeProps) => {
   const variants = {
-    success: "bg-success/10 text-success border-success/20",
-    warning: "bg-warning/10 text-warning border-warning/20 animate-pulse",
-    danger: "bg-danger/10 text-danger border-danger/20",
-    info: "bg-info/10 text-info border-info/20",
-    default: "bg-bg-elevated text-text-secondary border-border"
+    default: 'bg-amber-100 text-amber-950 border border-amber-950',
+    success: 'bg-green-100 text-green-900 border border-green-900',
+    warning: 'bg-yellow-100 text-yellow-900 border border-yellow-900',
+    danger: 'bg-red-100 text-red-900 border border-red-900',
+    info: 'bg-amber-950 text-amber-50 border border-amber-950'
   };
 
   return (
-    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${variants[variant]}`}>
+    <span className={`px-2.5 py-0.5 text-[10px] font-display font-black uppercase tracking-wider ${variants[variant]} ${className}`}>
       {children}
     </span>
   );

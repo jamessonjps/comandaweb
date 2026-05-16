@@ -7,7 +7,7 @@ export interface ItemPedido {
   id: string;
   produto_id: string;
   quantidade: number;
-  preco_unitario: number;
+  preco_unitario_congelado: number;
   status_item: 'pendente' | 'em_preparo' | 'entregue' | 'cancelado';
   observacao?: string;
   produto: {

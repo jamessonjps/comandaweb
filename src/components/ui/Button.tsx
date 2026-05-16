@@ -15,15 +15,15 @@ export const Button = ({
   const baseStyles = "relative flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-medium transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none min-h-[var(--touch-min)]";
   
   const variants = {
-    primary: "bg-accent text-black hover:opacity-90 shadow-[0_0_20px_rgba(234,179,8,0.2)]",
-    secondary: "bg-bg-elevated text-text-primary hover:bg-bg-overlay border border-border",
-    danger: "bg-danger text-white hover:opacity-90 shadow-[0_0_20px_rgba(239,68,68,0.2)]",
-    ghost: "bg-transparent text-text-secondary hover:text-text-primary hover:bg-bg-overlay"
+    primary: 'woodcut-button',
+    secondary: 'bg-amber-100 text-amber-950 border-2 border-amber-950 hover:bg-amber-200 active:translate-y-0.5 active:shadow-none shadow-[3px_3px_0px_0px_rgba(69,26,3,1)]',
+    ghost: 'text-amber-950 hover:bg-amber-100 font-bold uppercase tracking-wider',
+    danger: 'bg-red-900 text-white border-2 border-amber-950 shadow-[3px_3px_0px_0px_rgba(69,26,3,1)] active:translate-y-0.5 active:shadow-none'
   };
 
   return (
-    <button 
-      className={`${baseStyles} ${variants[variant]} ${className}`}
+    <button
+      className={`flex items-center justify-center gap-2 px-6 py-3 font-display text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all ${variants[variant]} ${className}`}
       disabled={isLoading || props.disabled}
       {...props}
     >
