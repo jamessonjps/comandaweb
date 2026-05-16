@@ -1,36 +1,41 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { BottomNav } from '@/components/layout/BottomNav';
-import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency } from '@/utils/formatters';
-import { Receipt, CheckCircle, Clock } from 'lucide-react';
-
-interface ComandaCaixa {
-  id: string;
-  mesa_id: string;
-  total: number;
-  status: string;
-  aberta_em: string;
-  mesa: {
-    numero: number;
-  };
-}
+import { 
+  Receipt, 
+  DollarSign, 
+  Clock, 
+  CheckCircle2, 
+  XCircle, 
+  ArrowRight,
+  Plus,
+  MessageSquare,
+  Smartphone
+} from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 
 export default function CaixaDashboardPage() {
-  const [comandas, setComandas] = useState<ComandaCaixa[]>([]);
+  const [comandas, setComandas] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedComanda, setSelectedComanda] = useState<any>(null);
+  
+  // Estados para o Fechamento
+  const [isClosing, setIsClosing] = useState(false);
+  const [useTaxa, setUseTaxa] = useState(true);
+  const [pagamentos, setPagamentos] = useState<{metodo: string, valor: number}[]>([]);
+  const [metodoAtual, setMetodoAtual] = useState('dinheiro');
+  const [valorAtual, setValorAtual] = useState('');
 
   const fetchComandasAtivas = async () => {
     const { data, error } = await supabase
       .from('comandas')
-      .select('*, mesa:mesas(numero)')
+      .select('*, mesa:mesas(numero), clientes(nome, telefone, whatsapp)')
       .in('status', ['aberta', 'fechando'])
-      .order('status', { ascending: false });
+      .order('aberta_em', { ascending: false });
 
     if (!error) setComandas(data || []);
     setIsLoading(false);
@@ -44,95 +49,209 @@ export default function CaixaDashboardPage() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
-  const handleFecharPagamento = async (comandaId: string, mesaId: string) => {
-    const forma = confirm("CONFIRMAR PAGAMENTO?");
-    if (!forma) return;
+  const totalComTaxa = (selectedComanda?.total_calculado || 0) * (useTaxa ? 1.1 : 1);
+  const jaPago = pagamentos.reduce((acc, p) => acc + p.valor, 0);
+  const faltaPagar = totalComTaxa - jaPago;
 
-    try {
-      const { error } = await supabase
-        .from('comandas')
-        .update({ 
-          status_pagamento: 'Pago',
-          status: 'paga'
-        })
-        .eq('id', comandaId);
+  const handleAddPagamento = () => {
+    const valor = parseFloat(valorAtual);
+    if (isNaN(valor) || valor <= 0) return;
 
-      if (error) throw error;
-
-      await supabase
-        .from('mesas')
-        .update({ status: 'livre' })
-        .eq('id', mesaId);
-
-      alert("PAGAMENTO REGISTRADO!");
-    } catch (err) {
-      console.error(err);
-      alert("ERRO AO PROCESSAR.");
+    if (metodoAtual === 'fiado') {
+      if (!selectedComanda.clientes?.telefone && !selectedComanda.clientes?.whatsapp) {
+        alert('PARA FIADO, É NECESSÁRIO QUE O CLIENTE TENHA TELEFONE CADASTRADO.');
+        return;
+      }
     }
+
+    setPagamentos([...pagamentos, { metodo: metodoAtual, valor }]);
+    setValorAtual('');
+  };
+
+  const handleFinalizar = async () => {
+    if (faltaPagar > 0.01) {
+      alert(`AINDA FALTA RECEBER ${formatCurrency(faltaPagar)}`);
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // 1. Salvar fracionamento de pagamentos
+      await supabase.from('pagamentos_comanda').insert(
+        pagamentos.map(p => ({ comanda_id: selectedComanda.id, metodo: p.metodo, valor: p.valor }))
+      );
+
+      // 2. Fechar comanda
+      await supabase.from('comandas').update({ 
+        status: 'paga',
+        fechada_em: new Date().toISOString(),
+        total_pago: jaPago,
+        taxa_servico_inclusa: useTaxa,
+        valor_taxa_servico: useTaxa ? selectedComanda.total_calculado * 0.1 : 0
+      }).eq('id', selectedComanda.id);
+
+      // 3. Liberar mesa
+      await supabase.from('mesas').update({ status: 'livre' }).eq('id', selectedComanda.mesa_id);
+
+      alert('CONTA FECHADA COM SUCESSO!');
+      setIsClosing(false);
+      setSelectedComanda(null);
+      setPagamentos([]);
+      fetchComandasAtivas();
+    } catch (err) {
+      alert('ERRO AO FINALIZAR');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const shareWhatsApp = () => {
+    if (!selectedComanda) return;
+    const text = `*RESUMO DA CONTA - MESA ${selectedComanda.mesa.numero}*\n\n` +
+      `Consumo: ${formatCurrency(selectedComanda.total_calculado)}\n` +
+      `${useTaxa ? `Taxa Serviço (10%): ${formatCurrency(selectedComanda.total_calculado * 0.1)}\n` : ''}` +
+      `*TOTAL: ${formatCurrency(totalComTaxa)}*\n\n` +
+      `Obrigado pela preferência!`;
+    
+    const phone = selectedComanda.clientes?.whatsapp || selectedComanda.clientes?.telefone || '';
+    const url = `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
   };
 
   return (
     <div className="min-h-screen bg-stone-50 pb-32 font-sans">
-      <AppHeader title="Caixa" showBack={true} />
+      <AppHeader title="Caixa / Financeiro" />
 
       <main className="px-6 py-6 flex flex-col gap-6">
-        {/* Resumo Rápido Moderno */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bistro-card flex flex-col gap-1 p-4 shadow-sm">
-            <span className="text-[10px] text-stone-400 uppercase font-bold tracking-widest">Abertas</span>
-            <span className="text-2xl font-black text-stone-900">{comandas.length}</span>
-          </div>
-          <div className="bistro-card flex flex-col gap-1 p-4 shadow-sm border-stone-100 bg-white">
-            <span className="text-[10px] text-stone-400 uppercase font-bold tracking-widest">Pendente</span>
-            <span className="text-xl font-black text-stone-900 leading-tight">
-              {formatCurrency(comandas.reduce((acc, c) => acc + c.total, 0))}
-            </span>
-          </div>
-        </div>
-
-        <h2 className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.3em] px-1">
-          Comandas Ativas
-        </h2>
-
-        <div className="flex flex-col gap-4">
-          {isLoading ? (
-            <div className="py-20 flex justify-center">
-              <div className="w-10 h-10 border-4 border-stone-900 border-t-transparent rounded-full animate-spin" />
+        {/* Modal de Fechamento */}
+        {selectedComanda && (
+          <div className="fixed inset-0 bg-stone-900/90 z-50 p-6 flex flex-col gap-6 animate-in fade-in duration-300">
+            <div className="flex justify-between items-center text-white">
+              <h2 className="text-xl font-black uppercase tracking-tighter">Mesa {selectedComanda.mesa.numero}</h2>
+              <button onClick={() => setSelectedComanda(null)}><XCircle size={32} className="opacity-40" /></button>
             </div>
-          ) : comandas.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-stone-200">
-              <CheckCircle size={64} className="mb-4" />
-              <span className="text-[10px] font-bold uppercase tracking-widest">Tudo em dia!</span>
-            </div>
-          ) : (
-            comandas.map((comanda) => (
-              <div key={comanda.id} className="bistro-card flex flex-col gap-5">
-                <div className="flex justify-between items-start">
-                  <div className="flex flex-col">
-                    <span className="text-2xl font-extrabold text-stone-900 tracking-tighter">MESA {comanda.mesa.numero.toString().padStart(2, '0')}</span>
-                    <div className="flex items-center gap-2 text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-1">
-                      <Clock size={12} />
-                      <span>{new Date(comanda.aberta_em).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                  </div>
-                  <Badge variant={comanda.status === 'fechando' ? 'warning' : 'info'}>
-                    {comanda.status}
-                  </Badge>
+
+            <div className="bg-white rounded-3xl p-6 flex flex-col gap-4 shadow-2xl">
+              <div className="flex justify-between items-end border-b border-stone-50 pb-4">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Consumo</span>
+                  <span className="text-lg font-bold text-stone-600">{formatCurrency(selectedComanda.total_calculado)}</span>
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer bg-stone-50 px-3 py-2 rounded-xl border border-stone-100">
+                  <input type="checkbox" checked={useTaxa} onChange={(e) => setUseTaxa(e.target.checked)} className="accent-stone-900" />
+                  <span className="text-[10px] font-bold uppercase tracking-tight text-stone-900">Taxa 10%</span>
+                </label>
+              </div>
+
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm font-black text-stone-900 uppercase">Total Geral</span>
+                <span className="text-3xl font-black text-stone-900 tracking-tighter">{formatCurrency(totalComTaxa)}</span>
+              </div>
+
+              {/* Lançar Pagamento */}
+              <div className="flex flex-col gap-3 pt-4 border-t border-stone-50">
+                <div className="flex gap-2">
+                  <select 
+                    value={metodoAtual} 
+                    onChange={(e) => setMetodoAtual(e.target.value)}
+                    className="flex-1 bg-stone-50 border border-stone-100 rounded-xl p-3 text-xs font-bold uppercase"
+                  >
+                    <option value="dinheiro">Dinheiro</option>
+                    <option value="pix">PIX</option>
+                    <option value="cartao_debito">C. Débito</option>
+                    <option value="cartao_credito">C. Crédito</option>
+                    <option value="fiado">Fiado (Pendente)</option>
+                  </select>
+                  <input 
+                    type="number" 
+                    placeholder="Valor"
+                    value={valorAtual}
+                    onChange={(e) => setValorAtual(e.target.value)}
+                    className="w-24 bg-stone-50 border border-stone-100 rounded-xl p-3 text-xs font-bold outline-none"
+                  />
+                  <button onClick={handleAddPagamento} className="w-12 h-12 bg-stone-900 text-white rounded-xl flex items-center justify-center"><Plus /></button>
                 </div>
 
-                <div className="flex justify-between items-end pt-5 border-t border-stone-100">
+                {/* Lista de Pagamentos Lançados */}
+                <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
+                  {pagamentos.map((p, i) => (
+                    <div key={i} className="flex justify-between text-[10px] font-bold uppercase bg-stone-50 p-2 rounded-lg">
+                      <span className="text-stone-400">{p.metodo}</span>
+                      <span className="text-stone-900">{formatCurrency(p.valor)}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-between items-center bg-stone-900 text-white p-4 rounded-2xl mt-2">
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-stone-400 uppercase font-bold tracking-widest">A Pagar</span>
-                    <span className="text-2xl font-black text-stone-900">{formatCurrency(comanda.total)}</span>
+                    <span className="text-[8px] uppercase font-bold opacity-60 tracking-widest">Falta Receber</span>
+                    <span className="text-xl font-black">{formatCurrency(faltaPagar)}</span>
                   </div>
-                  <Button 
-                    onClick={() => handleFecharPagamento(comanda.id, comanda.mesa_id)}
-                    variant={comanda.status === 'fechando' ? 'primary' : 'secondary'}
-                    className="h-12 px-4"
-                  >
-                    <Receipt size={18} />
-                    RECEBER
+                  <Button onClick={handleFinalizar} disabled={faltaPagar > 0.01 || isLoading} className="!bg-white !text-stone-900 h-12">
+                    FINALIZAR
                   </Button>
+                </div>
+              </div>
+
+              <button 
+                onClick={shareWhatsApp}
+                className="w-full flex items-center justify-center gap-2 py-3 text-[10px] font-black uppercase text-green-600 bg-green-50 rounded-xl"
+              >
+                <Smartphone size={14} /> ENVIAR CONTA VIA WHATSAPP
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Listagem do Caixa */}
+        <div className="flex flex-col gap-4">
+          <h2 className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.3em] px-1">Comandas em Aberto</h2>
+          {comandas.length === 0 ? (
+            <div className="py-20 flex flex-col items-center gap-4">
+              <CheckCircle2 size={48} className="text-stone-200" />
+              <span className="text-[10px] font-bold text-stone-300 uppercase tracking-widest">Nenhuma conta pendente</span>
+            </div>
+          ) : (
+            comandas.map((c) => (
+              <div key={c.id} className="bistro-card flex flex-col gap-4 border-stone-200">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-stone-900 text-white flex items-center justify-center font-display font-black text-xl">
+                      {c.mesa.numero.toString().padStart(2, '0')}
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold text-stone-900 uppercase">{c.clientes?.nome || 'Mesa Local'}</span>
+                      <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest flex items-center gap-1">
+                        <Clock size={10} /> {new Date(c.aberta_em).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </span>
+                    </div>
+                  </div>
+                  <Badge variant={c.status === 'fechando' ? 'warning' : 'default'}>
+                    {c.status === 'fechando' ? 'SOLIC. FECHAMENTO' : 'ABERTA'}
+                  </Badge>
+                </div>
+                
+                <div className="flex items-center justify-between pt-4 border-t border-stone-50">
+                  <div className="flex flex-col">
+                    <span className="text-[9px] text-stone-400 uppercase font-bold tracking-widest">Valor Atual</span>
+                    <span className="text-xl font-black text-stone-900">{formatCurrency(c.total_calculado)}</span>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      if (c.total_calculado === 0) {
+                        if(confirm('MESA ZERADA. DESEJA APENAS FECHAR?')) {
+                           supabase.from('comandas').update({ status: 'paga', fechada_em: new Date().toISOString() }).eq('id', c.id);
+                           supabase.from('mesas').update({ status: 'livre' }).eq('id', c.mesa_id);
+                        }
+                      } else {
+                        setSelectedComanda(c);
+                        setPagamentos([]);
+                      }
+                    }}
+                    className="bg-stone-900 text-white px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center gap-2 active:scale-95 transition-all"
+                  >
+                    FECHAR CONTA <ArrowRight size={16} />
+                  </button>
                 </div>
               </div>
             ))

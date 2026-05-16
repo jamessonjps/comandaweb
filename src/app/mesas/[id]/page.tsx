@@ -73,23 +73,32 @@ export default function ComandaDetalhesPage() {
     try {
       let clienteId = null;
 
-      // 1. Se informou nome, cria/busca o cliente
+      // 1. Tentar criar o cliente (Se falhar, não deve travar a abertura da mesa)
       if (clienteNome.trim()) {
-        const { data: cliente, error: cliError } = await supabase
-          .from('clientes')
-          .insert({ 
-            nome: clienteNome, 
-            telefone: clienteTelefone,
-            whatsapp: clienteTelefone 
-          })
-          .select()
-          .single();
-        
-        if (!cliError) clienteId = cliente.id;
+        try {
+          const { data: cliente, error: cliError } = await supabase
+            .from('clientes')
+            .insert({ 
+              nome: clienteNome, 
+              telefone: clienteTelefone,
+              whatsapp: clienteTelefone 
+            })
+            .select()
+            .single();
+          
+          if (cliError) {
+            console.warn('Não foi possível cadastrar o cliente, mas continuaremos:', cliError);
+          } else if (cliente) {
+            clienteId = cliente.id;
+          }
+        } catch (cErr) {
+          console.warn('Erro silencioso ao criar cliente:', cErr);
+        }
       }
 
       // 2. Abrir Comanda
-      const { error } = await supabase
+      console.log('Inserindo comanda...', { mesa_id: mesaId, garcom_id: user.id, cliente_id: clienteId });
+      const { error: insertError } = await supabase
         .from('comandas')
         .insert({
           mesa_id: mesaId,
@@ -99,8 +108,9 @@ export default function ComandaDetalhesPage() {
           status_pagamento: 'Pendente'
         });
 
-      if (error) {
-        alert('ERRO AO ABRIR COMANDA: ' + error.message);
+      if (insertError) {
+        console.error('Erro de inserção:', insertError);
+        alert('ERRO AO ABRIR COMANDA: ' + insertError.message);
         setIsActionLoading(false);
         return;
       }
@@ -183,19 +193,33 @@ export default function ComandaDetalhesPage() {
               </button>
             </div>
           ) : (
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2 text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold">
-                  <Clock size={12} />
-                  <span>Há {formatElapsedTime(comanda.aberta_em)}</span>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2 text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold">
+                    <Clock size={12} />
+                    <span>Há {formatElapsedTime(comanda.aberta_em)}</span>
+                  </div>
+                  <div className="text-3xl font-black text-stone-900 tracking-tighter">
+                    {formatCurrency(comanda.total_calculado)}
+                  </div>
                 </div>
-                <div className="text-3xl font-black text-stone-900 tracking-tighter">
-                  {formatCurrency(comanda.total_calculado)}
-                </div>
+                <Badge variant={comanda.status === 'fechando' ? 'warning' : 'info'}>
+                  {comanda.status}
+                </Badge>
               </div>
-              <Badge variant={comanda.status === 'fechando' ? 'warning' : 'info'}>
-                {comanda.status}
-              </Badge>
+
+              {comanda.clientes && (
+                <div className="flex items-center gap-3 pt-3 border-t border-stone-50">
+                  <div className="w-8 h-8 rounded-lg bg-stone-50 flex items-center justify-center text-stone-400">
+                    <User size={16} />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-stone-900 uppercase">{comanda.clientes.nome}</span>
+                    <span className="text-[9px] font-bold text-stone-400 uppercase tracking-tighter">{comanda.clientes.telefone || 'Sem Telefone'}</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
