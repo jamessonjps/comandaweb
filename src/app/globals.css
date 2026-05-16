@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+:root {
+  /* Backgrounds */
+  --bg-base:     #0A0A0B;
+  --bg-surface:  #161618;
+  --bg-elevated: #1E1E21;
+  --bg-overlay:  rgba(255,255,255,0.04);
+
+  /* Brand */
+  --accent:      #EAB308;
+  --accent-dim:  #92710A;
+  --success:     #22C55E;
+  --danger:      #EF4444;
+  --warning:     #F97316;
+  --info:        #3B82F6;
+
+  /* Texto */
+  --text-primary:   #F4F4F5;
+  --text-secondary: #A1A1AA;
+  --text-muted:     #52525B;
+
+  /* Bordas & Sombras */
+  --border:         rgba(255,255,255,0.08);
+  --shadow-card:    0 4px 24px rgba(0,0,0,0.4);
+  --shadow-fab:     0 8px 32px rgba(234,179,8,0.3);
+
+  /* Touch targets */
+  --touch-min: 44px;
+
+  /* Raios */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  --background: var(--bg-base);
+  --foreground: var(--text-primary);
+}
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-accent: var(--accent);
+  --color-surface: var(--bg-surface);
+  --color-elevated: var(--bg-elevated);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Custom Scrollbar for Premium Feel */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-elevated);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
