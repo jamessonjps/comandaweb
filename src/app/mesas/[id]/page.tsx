@@ -1,10 +1,17 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Plus, Receipt, Send, Clock, AlertCircle } from 'lucide-react';
+import { 
+  Plus, 
+  Receipt, 
+  Send, 
+  Clock, 
+  AlertCircle, 
+  User, 
+  Phone 
+} from 'lucide-react';
 import { AppHeader } from '@/components/layout/AppHeader';
-import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useComanda } from '@/hooks/useComanda';
 import { useCarrinhoStore } from '@/store/carrinho.store';
@@ -19,15 +26,22 @@ export default function ComandaDetalhesPage() {
   const { itens: itensCarrinho, total: totalCarrinho, limparCarrinho } = useCarrinhoStore();
   const user = useAuthStore(state => state.user);
 
+  // Estados para abertura de mesa
+  const [clienteNome, setClienteNome] = useState('');
+  const [clienteTelefone, setClienteTelefone] = useState('');
+  const [isActionLoading, setIsActionLoading] = useState(false);
+
   const handleEnviarPedido = async () => {
     if (!comanda || itensCarrinho.length === 0 || !user) return;
+    setIsActionLoading(true);
 
     try {
       const pedidosParaInserir = itensCarrinho.map(item => ({
         comanda_id: comanda.id,
         produto_id: item.produto_id,
         quantidade: item.quantidade,
-        preco_unitario_congelado: item.preco_unitario,
+        preco_unitario: item.preco_unitario, // Campo obrigatório no banco
+        preco_unitario_congelado: item.preco_unitario, // Campo adicional que criamos
         observacao: item.observacao,
         criado_por: user.id
       }));
@@ -47,56 +61,31 @@ export default function ComandaDetalhesPage() {
     } catch (err: any) {
       console.error('Erro ao enviar pedido:', err);
       alert('ERRO NO SISTEMA: ' + err.message);
+    } finally {
+      setIsActionLoading(false);
     }
   };
-
-  const handleSolicitarFechamento = async () => {
-    if (!comanda) return;
-    
-    try {
-      const { error } = await supabase
-        .from('comandas')
-        .update({ status: 'fechando' })
-        .eq('id', comanda.id);
-
-      if (error) {
-        alert('ERRO AO SOLICITAR FECHAMENTO: ' + error.message);
-        return;
-      }
-
-      const { error: mesaError } = await supabase
-        .from('mesas')
-        .update({ status: 'fechando' })
-        .eq('id', mesaId);
-
-      if (mesaError) throw mesaError;
-      await refresh();
-      
-    } catch (err: any) {
-      console.error('Erro ao solicitar fechamento:', err);
-    }
-  };
-
-  const [isActionLoading, setIsActionLoading] = React.useState(false);
 
   const handleAbrirMesa = async () => {
     if (!user || isActionLoading) return;
     setIsActionLoading(true);
 
     try {
-      // 1. Verificar se já não existe uma comanda aberta (Segurança de Duplicidade)
-      const { data: existenta } = await supabase
-        .from('comandas')
-        .select('id')
-        .eq('mesa_id', mesaId)
-        .in('status', ['aberta', 'fechando'])
-        .maybeSingle();
+      let clienteId = null;
 
-      if (existenta) {
-        alert('ESTA MESA JÁ FOI ABERTA POR OUTRO USUÁRIO.');
-        await refresh();
-        setIsActionLoading(false);
-        return;
+      // 1. Se informou nome, cria/busca o cliente
+      if (clienteNome.trim()) {
+        const { data: cliente, error: cliError } = await supabase
+          .from('clientes')
+          .insert({ 
+            nome: clienteNome, 
+            telefone: clienteTelefone,
+            whatsapp: clienteTelefone 
+          })
+          .select()
+          .single();
+        
+        if (!cliError) clienteId = cliente.id;
       }
 
       // 2. Abrir Comanda
@@ -105,6 +94,7 @@ export default function ComandaDetalhesPage() {
         .insert({
           mesa_id: mesaId,
           garcom_id: user.id,
+          cliente_id: clienteId,
           status: 'aberta',
           status_pagamento: 'Pendente'
         });
@@ -131,9 +121,20 @@ export default function ComandaDetalhesPage() {
     }
   };
 
-  if (isLoading) return <div className="min-h-screen bg-stone-50 flex items-center justify-center">
-    <div className="w-12 h-12 border-4 border-stone-900 border-t-transparent rounded-full animate-spin" />
-  </div>;
+  const handleSolicitarFechamento = async () => {
+    if (!comanda) return;
+    try {
+      await supabase.from('comandas').update({ status: 'fechando' }).eq('id', comanda.id);
+      await supabase.from('mesas').update({ status: 'fechando' }).eq('id', mesaId);
+      await refresh();
+    } catch (err) {}
+  };
+
+  if (isLoading) return (
+    <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+      <div className="w-12 h-12 border-4 border-stone-900 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-stone-50 pb-48 font-sans">
@@ -144,21 +145,45 @@ export default function ComandaDetalhesPage() {
       />
 
       <main className="px-6 py-4 flex flex-col gap-6">
-        {/* Header de Info Moderno */}
-        <div className="bistro-card flex items-center justify-between">
+        {/* Painel de Abertura ou Info */}
+        <div className="bistro-card flex flex-col gap-4">
           {!comanda ? (
-            <div className="flex flex-col gap-3 w-full">
-              <span className="text-stone-400 text-[10px] font-bold uppercase tracking-widest text-center">Mesa Disponível</span>
+            <div className="flex flex-col gap-4 w-full">
+              <span className="text-stone-400 text-[10px] font-bold uppercase tracking-widest text-center">Identificação do Cliente</span>
+              
+              <div className="flex flex-col gap-3">
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-300" size={16} />
+                  <input 
+                    type="text" 
+                    placeholder="Nome do Cliente (Opcional)"
+                    value={clienteNome}
+                    onChange={(e) => setClienteNome(e.target.value)}
+                    className="w-full bg-stone-50 border border-stone-100 rounded-xl py-3 pl-10 pr-4 text-sm outline-none focus:ring-1 ring-stone-200"
+                  />
+                </div>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-300" size={16} />
+                  <input 
+                    type="text" 
+                    placeholder="WhatsApp / Telefone"
+                    value={clienteTelefone}
+                    onChange={(e) => setClienteTelefone(e.target.value)}
+                    className="w-full bg-stone-50 border border-stone-100 rounded-xl py-3 pl-10 pr-4 text-sm outline-none focus:ring-1 ring-stone-200"
+                  />
+                </div>
+              </div>
+
               <button 
                 onClick={handleAbrirMesa} 
                 disabled={isActionLoading}
                 className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold uppercase tracking-widest active:scale-95 transition-all shadow-md disabled:opacity-50"
               >
-                {isActionLoading ? 'PROCESSANDO...' : 'INICIAR COMANDA'}
+                {isActionLoading ? 'PROCESSANDO...' : 'INICIAR ATENDIMENTO'}
               </button>
             </div>
           ) : (
-            <>
+            <div className="flex items-center justify-between">
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2 text-stone-400 text-[10px] uppercase tracking-[0.2em] font-bold">
                   <Clock size={12} />
@@ -171,36 +196,28 @@ export default function ComandaDetalhesPage() {
               <Badge variant={comanda.status === 'fechando' ? 'warning' : 'info'}>
                 {comanda.status}
               </Badge>
-            </>
+            </div>
           )}
         </div>
 
-        {/* Lista de Itens Já Pedidos */}
+        {/* Lista de Consumo */}
         {comanda && (
           <div className="flex flex-col gap-4">
-            <h2 className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.3em] px-1">
-              Consumo Local
-            </h2>
+            <h2 className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.3em] px-1">Consumo da Mesa</h2>
             <div className="flex flex-col gap-2">
               {itens.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-stone-200 gap-2">
                   <AlertCircle size={32} />
-                  <span className="text-[10px] font-bold uppercase tracking-widest">Sem lançamentos</span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Mesa Vazia</span>
                 </div>
               ) : (
                 itens.map((item) => (
                   <div key={item.id} className="flex items-center justify-between bg-white p-4 rounded-xl border border-stone-100 shadow-sm">
                     <div className="flex flex-col">
-                      <span className="text-sm font-bold text-stone-900 uppercase">
-                        {item.quantidade}x {item.produto.nome}
-                      </span>
-                      {item.observacao && (
-                        <span className="text-[10px] text-stone-400 italic mt-0.5">"{item.observacao}"</span>
-                      )}
+                      <span className="text-sm font-bold text-stone-900 uppercase">{item.quantidade}x {item.produto.nome}</span>
+                      {item.observacao && <span className="text-[10px] text-stone-400 italic mt-0.5">"{item.observacao}"</span>}
                     </div>
-                    <span className="text-sm font-black text-stone-900">
-                      {formatCurrency(item.preco_unitario_congelado * item.quantidade)}
-                    </span>
+                    <span className="text-sm font-black text-stone-900">{formatCurrency(item.preco_unitario_congelado * item.quantidade)}</span>
                   </div>
                 ))
               )}
@@ -208,23 +225,17 @@ export default function ComandaDetalhesPage() {
           </div>
         )}
 
-        {/* Itens no Carrinho (Aguardando Envio) */}
+        {/* Itens no Carrinho */}
         {itensCarrinho.length > 0 && (
           <div className="flex flex-col gap-4">
-            <h2 className="text-[10px] font-bold text-amber-600 uppercase tracking-[0.3em] px-1">
-              Novos Itens (A ENVIAR)
-            </h2>
+            <h2 className="text-[10px] font-bold text-amber-600 uppercase tracking-[0.3em] px-1">Aguardando Envio</h2>
             <div className="flex flex-col gap-2">
               {itensCarrinho.map((item) => (
                 <div key={item.produto_id} className="flex items-center justify-between bg-amber-50 p-4 rounded-xl border border-amber-100 border-dashed">
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold text-amber-900 uppercase">
-                      {item.quantidade}x {item.nome}
-                    </span>
+                    <span className="text-sm font-bold text-amber-900 uppercase">{item.quantidade}x {item.nome}</span>
                   </div>
-                  <span className="text-sm font-black text-amber-700">
-                    {formatCurrency(item.preco_unitario * item.quantidade)}
-                  </span>
+                  <span className="text-sm font-black text-amber-700">{formatCurrency(item.preco_unitario * item.quantidade)}</span>
                 </div>
               ))}
             </div>
@@ -232,11 +243,13 @@ export default function ComandaDetalhesPage() {
         )}
       </main>
 
+      {/* Ações Fixas */}
       <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-stone-50 to-transparent flex flex-col gap-4 z-40">
         {itensCarrinho.length > 0 ? (
           <button 
             onClick={handleEnviarPedido} 
-            className="w-full bg-stone-900 text-white p-5 rounded-2xl shadow-xl flex items-center justify-center gap-3 font-bold uppercase tracking-widest active:scale-[0.98] transition-all"
+            disabled={isActionLoading}
+            className="w-full bg-stone-900 text-white p-5 rounded-2xl shadow-xl flex items-center justify-center gap-3 font-bold uppercase tracking-widest active:scale-[0.98] transition-all disabled:opacity-50"
           >
             <Send size={20} />
             ENVIAR PEDIDO ({formatCurrency(totalCarrinho)})
@@ -260,10 +273,7 @@ export default function ComandaDetalhesPage() {
             </button>
           </div>
         )}
-        <button 
-          onClick={() => router.back()} 
-          className="w-full text-stone-400 font-bold text-[10px] uppercase tracking-[0.4em] py-2"
-        >
+        <button onClick={() => router.back()} className="w-full text-stone-400 font-bold text-[10px] uppercase tracking-[0.4em] py-2 text-center">
           ← Voltar
         </button>
       </div>

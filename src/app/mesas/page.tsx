@@ -6,7 +6,15 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { useRealtimeMesas } from '@/hooks/useRealtimeMesas';
 import { useAuthStore } from '@/store/auth.store';
-import { UtensilsIcon, Search, Receipt } from 'lucide-react';
+import { 
+  LayoutGrid, 
+  List, 
+  Plus, 
+  RefreshCw, 
+  UtensilsIcon, 
+  Search, 
+  Receipt 
+} from 'lucide-react';
 
 export default function MesasPage() {
   const { mesas, isLoading, refresh } = useRealtimeMesas();
