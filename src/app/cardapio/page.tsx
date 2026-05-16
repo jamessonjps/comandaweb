@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, ArrowLeft, ShoppingCart, Plus, Minus } from 'lucide-react';
 import { AppHeader } from '@/components/layout/AppHeader';
@@ -11,7 +11,7 @@ import { formatCurrency } from '@/utils/formatters';
 
 import { Skeleton, ProductSkeleton } from '@/components/ui/Skeleton';
 
-export default function CardapioPage() {
+function CardapioContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const mesaId = searchParams.get('mesaId');
@@ -147,5 +147,18 @@ export default function CardapioPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function CardapioPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-bg-base flex flex-col items-center justify-center gap-4">
+        <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin" />
+        <span className="text-text-secondary text-sm">Carregando cardápio...</span>
+      </div>
+    }>
+      <CardapioContent />
+    </Suspense>
   );
 }
