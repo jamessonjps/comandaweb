@@ -15,7 +15,7 @@ import { useAuthStore } from '@/store/auth.store';
 export default function ComandaDetalhesPage() {
   const { id: mesaId } = useParams() as { id: string };
   const router = useRouter();
-  const { comanda, itens, isLoading } = useComanda(mesaId);
+  const { comanda, itens, isLoading, refresh } = useComanda(mesaId);
   const { itens: itensCarrinho, total: totalCarrinho, limparCarrinho } = useCarrinhoStore();
   const user = useAuthStore(state => state.user);
 
@@ -27,7 +27,7 @@ export default function ComandaDetalhesPage() {
         comanda_id: comanda.id,
         produto_id: item.produto_id,
         quantidade: item.quantidade,
-        preco_unitario_congelado: item.preco_unitario, // Agora garantido no banco
+        preco_unitario_congelado: item.preco_unitario,
         observacao: item.observacao,
         criado_por: user.id
       }));
@@ -43,6 +43,7 @@ export default function ComandaDetalhesPage() {
       
       limparCarrinho();
       alert('PEDIDO ENVIADO!');
+      await refresh();
     } catch (err: any) {
       console.error('Erro ao enviar pedido:', err);
       alert('ERRO NO SISTEMA: ' + err.message);
@@ -59,7 +60,7 @@ export default function ComandaDetalhesPage() {
         .eq('id', comanda.id);
 
       if (error) {
-        alert('ERRO AO FECHAR: ' + error.message);
+        alert('ERRO AO SOLICITAR FECHAMENTO: ' + error.message);
         return;
       }
 
@@ -69,6 +70,7 @@ export default function ComandaDetalhesPage() {
         .eq('id', mesaId);
 
       if (mesaError) throw mesaError;
+      await refresh();
       
     } catch (err: any) {
       console.error('Erro ao solicitar fechamento:', err);
@@ -77,7 +79,7 @@ export default function ComandaDetalhesPage() {
 
   const handleAbrirMesa = async () => {
     if (!user) {
-      alert('ERRO: USUÁRIO NÃO IDENTIFICADO. REFAÇA O LOGIN.');
+      alert('ERRO: VOCÊ PRECISA ESTAR LOGADO. SAIA E ENTRE NOVAMENTE.');
       return;
     }
 
@@ -87,7 +89,8 @@ export default function ComandaDetalhesPage() {
         .insert({
           mesa_id: mesaId,
           garcom_id: user.id,
-          status_pagamento: 'Pendente' // Agora garantido no banco
+          status: 'aberta',
+          status_pagamento: 'Pendente'
         });
 
       if (error) {
@@ -101,8 +104,10 @@ export default function ComandaDetalhesPage() {
         .eq('id', mesaId);
 
       if (mesaError) {
-        alert('ERRO AO ATUALIZAR MESA: ' + mesaError.message);
+        console.error('Erro ao atualizar mesa:', mesaError);
       }
+
+      await refresh();
 
     } catch (err: any) {
       console.error('Erro ao abrir mesa:', err);
@@ -210,7 +215,6 @@ export default function ComandaDetalhesPage() {
         )}
       </main>
 
-      {/* Ações Fixas Modernas */}
       <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-stone-50 to-transparent flex flex-col gap-4 z-40">
         {itensCarrinho.length > 0 ? (
           <button 
