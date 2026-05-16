@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware';
 interface User {
   id: string;
   nome: string;
-  nivel_acesso: 'garcom' | 'caixa' | 'admin';
+  nivel_acesso: 'garcom' | 'caixa' | 'admin' | 'GERENTE';
 }
 
 interface AuthState {
