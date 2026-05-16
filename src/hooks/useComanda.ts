@@ -74,15 +74,15 @@ export function useComanda(mesaId: string) {
   useEffect(() => {
     fetchComanda();
 
-    // Inscrição Realtime para itens de pedido
+    // Inscrição Realtime para itens e comandas
     const channel = supabase
-      .channel(`comanda-${mesaId}`)
+      .channel(`comanda-realtime-${mesaId}`)
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'itens_pedido' }, 
         () => fetchComanda()
       )
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'comandas', filter: `mesa_id=eq.${mesaId}` }, 
+        { event: '*', schema: 'public', table: 'comandas' }, 
         () => fetchComanda()
       )
       .subscribe();

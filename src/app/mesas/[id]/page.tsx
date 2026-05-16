@@ -48,6 +48,32 @@ export default function ComandaDetalhesPage() {
     setValorAtual('');
   };
 
+  const handleEnviarPedido = async () => {
+    if (!comanda || itensCarrinho.length === 0 || !user) return;
+    setIsActionLoading(true);
+    try {
+      console.log('Enviando itens para comanda:', comanda.id);
+      const { error } = await supabase.from('itens_pedido').insert(
+        itensCarrinho.map(item => ({
+          comanda_id: comanda.id,
+          produto_id: item.produto_id,
+          quantidade: item.quantidade,
+          preco_unitario: item.preco_unitario,
+          preco_unitario_congelado: item.preco_unitario,
+          criado_por: user.id
+        }))
+      );
+      if (error) throw error;
+      limparCarrinho();
+      await refresh();
+      alert('PEDIDO ENVIADO COM SUCESSO!');
+    } catch (err: any) {
+      alert('ERRO AO ENVIAR PEDIDO: ' + err.message);
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
   const handleFinalizarConta = async () => {
     if (faltaPagar > 0.01) {
       alert(`FALTA RECEBER: ${formatCurrency(faltaPagar)}`);
@@ -55,13 +81,11 @@ export default function ComandaDetalhesPage() {
     }
     setIsActionLoading(true);
     try {
-      // 1. Registrar pagamentos
       const { error: pErr } = await supabase.from('pagamentos_comanda').insert(
         pagamentos.map(p => ({ comanda_id: comanda!.id, metodo: p.metodo, valor: p.valor }))
       );
-      if (pErr) throw new Error('Falha ao registrar pagamentos: ' + pErr.message);
+      if (pErr) throw pErr;
 
-      // 2. Fechar comanda
       const { error: cErr } = await supabase.from('comandas').update({ 
         status: 'paga',
         fechada_em: new Date().toISOString(),
@@ -69,50 +93,33 @@ export default function ComandaDetalhesPage() {
         taxa_servico_inclusa: useTaxa,
         valor_taxa_servico: useTaxa ? comanda!.total_calculado * 0.1 : 0
       }).eq('id', comanda!.id);
-      if (cErr) throw new Error('Falha ao fechar comanda: ' + cErr.message);
+      if (cErr) throw cErr;
 
-      // 3. Liberar mesa
-      const { error: mErr } = await supabase.from('mesas').update({ status: 'livre' }).eq('id', mesaId);
-      if (mErr) throw new Error('Falha ao liberar mesa: ' + mErr.message);
-
-      alert('MESA LIBERADA COM SUCESSO!');
+      await supabase.from('mesas').update({ status: 'livre' }).eq('id', mesaId);
+      alert('MESA FINALIZADA!');
       router.push('/mesas');
     } catch (err: any) {
-      alert('ERRO CRÍTICO: ' + err.message);
+      alert('ERRO AO FINALIZAR: ' + err.message);
     } finally {
       setIsActionLoading(false);
     }
   };
 
   const handleAbrirMesa = async () => {
-    if (!user) {
-      alert('ERRO: USUÁRIO NÃO LOGADO. REFAÇA O LOGIN.');
-      return;
-    }
+    if (!user) { alert('REFAÇA O LOGIN.'); return; }
     setIsActionLoading(true);
     try {
       let clienteId = null;
       if (clienteNome.trim()) {
-        const { data: cliente, error: cliError } = await supabase.from('clientes').insert({ nome: clienteNome, telefone: clienteTelefone, whatsapp: clienteTelefone }).select().maybeSingle();
+        const { data: cliente } = await supabase.from('clientes').insert({ nome: clienteNome, telefone: clienteTelefone, whatsapp: clienteTelefone }).select().maybeSingle();
         if (cliente) clienteId = cliente.id;
       }
-
-      const { error: comandaError } = await supabase.from('comandas').insert({
-        mesa_id: mesaId,
-        garcom_id: user.id,
-        cliente_id: clienteId,
-        status: 'aberta',
-        status_pagamento: 'Pendente'
-      });
-
-      if (comandaError) throw new Error('Erro ao criar comanda: ' + comandaError.message);
-
-      const { error: mesaError } = await supabase.from('mesas').update({ status: 'ocupada' }).eq('id', mesaId);
-      if (mesaError) throw new Error('Erro ao ocupar mesa: ' + mesaError.message);
-
+      const { error: cErr } = await supabase.from('comandas').insert({ mesa_id: mesaId, garcom_id: user.id, cliente_id: clienteId, status: 'aberta', status_pagamento: 'Pendente' });
+      if (cErr) throw cErr;
+      await supabase.from('mesas').update({ status: 'ocupada' }).eq('id', mesaId);
       await refresh();
     } catch (err: any) {
-      alert('ERRO AO INICIAR: ' + err.message);
+      alert('ERRO AO ABRIR: ' + err.message);
     } finally {
       setIsActionLoading(false);
     }
@@ -122,22 +129,26 @@ export default function ComandaDetalhesPage() {
 
   return (
     <div className="min-h-screen bg-stone-50 pb-48 font-sans">
-      <AppHeader title={comanda ? `Mesa ${comanda.mesa.numero.toString().padStart(2, '0')}` : 'Abrir Atendimento'} showUser={false} showBack={true} />
+      <AppHeader title={comanda ? `Mesa ${comanda.mesa.numero.toString().padStart(2, '0')}` : 'Novo Atendimento'} showUser={false} showBack={true} />
 
       {showCheckout && comanda && (
         <div className="fixed inset-0 bg-stone-900/95 z-50 p-6 flex flex-col gap-4 overflow-y-auto">
           <div className="flex justify-between items-center text-white">
-            <h2 className="text-xl font-black uppercase">Finalizar Mesa {comanda.mesa.numero}</h2>
+            <h2 className="text-xl font-black uppercase tracking-tighter">Mesa {comanda.mesa.numero}</h2>
             <button onClick={() => setShowCheckout(false)}><XCircle size={32} /></button>
           </div>
           <div className="bg-white rounded-3xl p-6 flex flex-col gap-4">
             <div className="flex justify-between border-b pb-4">
-              <span className="text-stone-400 text-[10px] font-bold uppercase">Subtotal</span>
-              <span className="font-bold">{formatCurrency(comanda.total_calculado)}</span>
+              <span className="text-stone-400 text-[10px] font-bold uppercase tracking-widest">Subtotal</span>
+              <span className="font-bold text-lg">{formatCurrency(comanda.total_calculado)}</span>
             </div>
+            <label className="flex items-center gap-2 bg-stone-50 p-3 rounded-xl cursor-pointer">
+              <input type="checkbox" checked={useTaxa} onChange={(e) => setUseTaxa(e.target.checked)} className="accent-stone-900" />
+              <span className="text-xs font-bold uppercase">Incluir Taxa 10% ({formatCurrency(comanda.total_calculado * 0.1)})</span>
+            </label>
             <div className="flex justify-between items-center py-2">
-              <span className="text-sm font-black uppercase">Total com 10%</span>
-              <span className="text-2xl font-black">{formatCurrency(totalComTaxa)}</span>
+              <span className="text-sm font-black uppercase">Total Geral</span>
+              <span className="text-3xl font-black text-stone-900">{formatCurrency(totalComTaxa)}</span>
             </div>
             <div className="flex gap-2">
               <select value={metodoAtual} onChange={(e) => setMetodoAtual(e.target.value)} className="flex-1 bg-stone-50 border rounded-xl p-3 text-xs font-bold uppercase">
@@ -153,13 +164,13 @@ export default function ComandaDetalhesPage() {
             <div className="flex flex-col gap-1">
               {pagamentos.map((p, i) => (
                 <div key={i} className="flex justify-between text-[10px] font-bold uppercase bg-stone-50 p-2 rounded-lg">
-                  <span>{p.metodo}</span><span>{formatCurrency(p.valor)}</span>
+                  <span className="text-stone-400">{p.metodo}</span><span className="text-stone-900">{formatCurrency(p.valor)}</span>
                 </div>
               ))}
             </div>
-            <div className="bg-stone-900 text-white p-4 rounded-2xl flex justify-between items-center">
-              <div className="flex flex-col"><span className="text-[8px] uppercase opacity-60">Falta</span><span className="text-lg font-black">{formatCurrency(faltaPagar)}</span></div>
-              <button onClick={handleFinalizarConta} disabled={faltaPagar > 0.01 || isActionLoading} className="bg-white text-stone-900 px-4 py-3 rounded-xl font-bold uppercase text-[10px]">{isActionLoading ? 'SALVANDO...' : 'FECHAR AGORA'}</button>
+            <div className="bg-stone-900 text-white p-5 rounded-2xl flex justify-between items-center mt-2 shadow-xl">
+              <div className="flex flex-col"><span className="text-[8px] uppercase opacity-60 tracking-widest">Falta</span><span className="text-xl font-black">{formatCurrency(faltaPagar)}</span></div>
+              <button onClick={handleFinalizarConta} disabled={faltaPagar > 0.01 || isActionLoading} className="bg-white text-stone-900 px-6 py-3 rounded-xl font-bold uppercase text-xs disabled:opacity-50">FINALIZAR</button>
             </div>
           </div>
         </div>
@@ -168,64 +179,77 @@ export default function ComandaDetalhesPage() {
       <main className="px-6 py-4 flex flex-col gap-6">
         {!comanda ? (
           <div className="bistro-card flex flex-col gap-4">
-            <span className="text-stone-400 text-[10px] font-bold uppercase tracking-widest text-center">Abrir Atendimento</span>
+            <span className="text-stone-400 text-[10px] font-bold uppercase tracking-widest text-center">Identificação do Atendimento</span>
             <div className="flex flex-col gap-3">
-              <div className="relative"><User className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-300" size={16} /><input type="text" placeholder="Nome do Cliente" value={clienteNome} onChange={(e) => setClienteNome(e.target.value)} className="w-full bg-stone-50 border rounded-xl py-3 pl-10 pr-4 text-sm" /></div>
-              <div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-300" size={16} /><input type="text" placeholder="WhatsApp" value={clienteTelefone} onChange={(e) => setClienteTelefone(e.target.value)} className="w-full bg-stone-50 border rounded-xl py-3 pl-10 pr-4 text-sm" /></div>
+              <div className="relative"><User className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-300" size={16} /><input type="text" placeholder="Nome do Cliente" value={clienteNome} onChange={(e) => setClienteNome(e.target.value)} className="w-full bg-stone-50 border border-stone-100 rounded-xl py-3 pl-10 pr-4 text-sm" /></div>
+              <div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-300" size={16} /><input type="text" placeholder="WhatsApp / Celular" value={clienteTelefone} onChange={(e) => setClienteTelefone(e.target.value)} className="w-full bg-stone-50 border border-stone-100 rounded-xl py-3 pl-10 pr-4 text-sm" /></div>
             </div>
-            <button onClick={handleAbrirMesa} disabled={isActionLoading} className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold uppercase tracking-widest">{isActionLoading ? 'PROCESSANDO...' : 'INICIAR'}</button>
+            <button onClick={handleAbrirMesa} disabled={isActionLoading} className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold uppercase tracking-widest active:scale-95 transition-all shadow-md">{isActionLoading ? 'INICIANDO...' : 'INICIAR ATENDIMENTO'}</button>
           </div>
         ) : (
           <div className="bistro-card flex flex-col gap-4">
-             <div className="flex justify-between items-center">
-                <div className="flex flex-col">
-                  <span className="text-3xl font-black text-stone-900">{formatCurrency(comanda.total_calculado)}</span>
-                  <span className="text-[10px] text-stone-400 font-bold uppercase tracking-widest">{comanda.clientes?.nome || 'Mesa Local'}</span>
-                </div>
-                <Badge variant={comanda.status === 'fechando' ? 'warning' : 'info'}>{comanda.status}</Badge>
-             </div>
-             <button onClick={() => {
-               if (comanda.total_calculado === 0) {
-                 if (confirm('LIBERAR MESA VAZIA?')) {
-                   supabase.from('comandas').update({ status: 'paga', fechada_em: new Date().toISOString() }).eq('id', comanda.id).then(() => {
-                     supabase.from('mesas').update({ status: 'livre' }).eq('id', mesaId).then(() => {
-                       refresh();
-                       router.push('/mesas');
-                     });
-                   });
-                 }
-               } else {
-                 setShowCheckout(true);
-               }
-             }} className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold uppercase tracking-widest flex items-center justify-center gap-2">
-               <Receipt size={18} /> FECHAR CONTA
-             </button>
+            <div className="flex justify-between items-center">
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2 text-stone-400 text-[10px] font-bold uppercase tracking-widest"><Clock size={12} /><span>{formatElapsedTime(comanda.aberta_em)}</span></div>
+                <div className="text-3xl font-black text-stone-900 tracking-tighter">{formatCurrency(comanda.total_calculado)}</div>
+              </div>
+              <Badge variant={comanda.status === 'fechando' ? 'warning' : 'info'}>{comanda.status}</Badge>
+            </div>
+            {comanda.clientes && (
+              <div className="flex items-center gap-3 pt-3 border-t border-stone-50">
+                <div className="w-8 h-8 rounded-lg bg-stone-50 flex items-center justify-center text-stone-400"><User size={16} /></div>
+                <div className="flex flex-col"><span className="text-[10px] font-black text-stone-900 uppercase">{comanda.clientes.nome}</span><span className="text-[9px] font-bold text-stone-400 uppercase">{comanda.clientes.telefone || 'S/ TEL'}</span></div>
+              </div>
+            )}
+            <button onClick={() => { if (comanda.total_calculado === 0) { if(confirm('MESA SEM CONSUMO. LIBERAR?')) { supabase.from('comandas').update({ status: 'paga', fechada_em: new Date().toISOString() }).eq('id', comanda.id).then(() => { supabase.from('mesas').update({ status: 'livre' }).eq('id', mesaId).then(() => { refresh(); router.push('/mesas'); }); }); } } else { setShowCheckout(true); } }} className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg"><Receipt size={18} /> FECHAR CONTA</button>
           </div>
         )}
-        
+
         {comanda && (
           <div className="flex flex-col gap-4">
-             <h2 className="text-[10px] font-bold text-stone-400 uppercase tracking-widest px-1">Consumo Atual</h2>
-             <div className="flex flex-col gap-2">
-               {itens.length === 0 ? (
-                 <div className="py-10 text-center text-stone-300 font-bold uppercase text-[10px]">Sem itens lançados</div>
-               ) : (
-                 itens.map((item) => (
-                   <div key={item.id} className="flex justify-between bg-white p-4 rounded-xl border text-xs font-bold uppercase">
-                     <span>{item.quantidade}x {item.produto.nome}</span><span>{formatCurrency(item.preco_unitario_congelado * item.quantidade)}</span>
-                   </div>
-                 ))
-               )}
-             </div>
+            <h2 className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.3em] px-1">Consumo da Mesa</h2>
+            <div className="flex flex-col gap-2">
+              {itens.length === 0 ? (
+                <div className="py-12 flex flex-col items-center gap-3 text-stone-200"><AlertCircle size={32} /><span className="text-[10px] font-bold uppercase tracking-widest">Nenhum item lançado</span></div>
+              ) : (
+                itens.map((item) => (
+                  <div key={item.id} className="flex justify-between bg-white p-4 rounded-xl border border-stone-100 shadow-sm font-bold uppercase text-xs">
+                    <span className="text-stone-900">{item.quantidade}x {item.produto.nome}</span>
+                    <span className="text-stone-900">{formatCurrency(item.preco_unitario_congelado * item.quantidade)}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {itensCarrinho.length > 0 && (
+          <div className="flex flex-col gap-4">
+            <h2 className="text-[10px] font-bold text-amber-600 uppercase tracking-[0.3em] px-1">Novos Itens (Pendente)</h2>
+            <div className="flex flex-col gap-2">
+              {itensCarrinho.map((item) => (
+                <div key={item.produto_id} className="flex justify-between bg-amber-50 p-4 rounded-xl border border-amber-100 border-dashed font-bold uppercase text-xs">
+                  <span className="text-amber-900">{item.quantidade}x {item.nome}</span>
+                  <span className="text-amber-700">{formatCurrency(item.preco_unitario * item.quantidade)}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </main>
 
       {comanda && (
-        <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-stone-50 flex flex-col gap-4">
-          <button onClick={() => router.push(`/cardapio?mesaId=${mesaId}`)} className="w-full bg-white border border-stone-200 text-stone-900 p-5 rounded-2xl shadow-sm font-bold uppercase flex items-center justify-center gap-3">
-             <Plus size={20} /> ADICIONAR ITENS
-          </button>
+        <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-stone-50 flex flex-col gap-4 z-40">
+          {itensCarrinho.length > 0 ? (
+            <button onClick={handleEnviarPedido} disabled={isActionLoading} className="w-full bg-stone-900 text-white p-5 rounded-2xl shadow-xl flex items-center justify-center gap-3 font-bold uppercase tracking-widest active:scale-95 transition-all">
+              <Send size={20} /> {isActionLoading ? 'ENVIANDO...' : `ENVIAR PEDIDO (${formatCurrency(totalCarrinho)})`}
+            </button>
+          ) : (
+            <button onClick={() => router.push(`/cardapio?mesaId=${mesaId}`)} className="w-full bg-white border border-stone-200 text-stone-900 p-5 rounded-2xl shadow-sm font-bold uppercase flex items-center justify-center gap-3 active:scale-95 transition-all">
+              <Plus size={20} /> ADICIONAR ITENS
+            </button>
+          )}
+          <button onClick={() => router.back()} className="w-full text-stone-400 font-bold text-[10px] uppercase tracking-[0.4em] py-2 text-center">← Voltar para o Mapa</button>
         </div>
       )}
     </div>
