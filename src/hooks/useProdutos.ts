@@ -7,8 +7,12 @@ export interface Produto {
   id: string;
   nome: string;
   preco: number;
-  categoria: string;
-  ativo: boolean;
+  categoria_id: string;
+  categoria?: string; // Mapeado no hook
+  volume_ml?: number;
+  estoque_atual?: number;
+  preco_compra?: number;
+  disponivel: boolean;
 }
 
 export function useProdutos() {
@@ -21,16 +25,21 @@ export function useProdutos() {
       try {
         const { data, error } = await supabase
           .from('produtos')
-          .select('*')
-          .eq('ativo', true);
+          .select('*, categorias(nome)')
+          .eq('disponivel', true);
 
         if (error) throw error;
 
-        setProdutos(data || []);
+        const mappedData = (data || []).map(p => ({
+          ...p,
+          categoria: p.categorias?.nome || 'Sem Categoria'
+        })) as Produto[];
+
+        setProdutos(mappedData);
         
         // Extrair categorias únicas
-        const uniqueCats = Array.from(new Set((data || []).map(p => p.categoria)));
-        setCategorias(uniqueCats);
+        const uniqueCats = Array.from(new Set(mappedData.map(p => p.categoria)));
+        setCategorias(uniqueCats as string[]);
       } catch (err) {
         console.error('Erro ao carregar produtos:', err);
       } finally {

@@ -17,13 +17,12 @@ export const AppHeader = ({ title, showBack = false, showUser = true }: AppHeade
     <header className="sticky top-0 z-50 w-full bg-white border-b border-stone-200 px-6 py-4">
       <div className="flex flex-col items-center gap-3">
         {/* Logotipo Centralizado e Limpo */}
-        <div className="flex flex-col items-center text-center">
-          <h1 className="font-display text-xl font-extrabold tracking-tighter text-stone-900 leading-none">
-            MANGUEIRÃO
-          </h1>
-          <span className="text-[9px] font-bold tracking-[0.25em] text-stone-400 mt-1 uppercase">
-            Bar & Petiscaria
-          </span>
+        <div className="flex flex-col items-center">
+          <img 
+            src="/logo.png" 
+            alt="Mangueirão Logo" 
+            className="h-16 w-auto object-contain"
+          />
         </div>
 
         <div className="w-full flex items-center justify-between mt-1">

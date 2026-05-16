@@ -54,10 +54,11 @@ export default function LoginPage() {
         
         {/* Logo Branding - Cleaner */}
         <div className="flex flex-col items-center gap-4">
-          <div className="text-center">
-            <h1 className="text-4xl font-display font-extrabold text-stone-900 tracking-tighter leading-none">MANGUEIRÃO</h1>
-            <p className="text-[10px] font-bold tracking-[0.4em] text-stone-400 mt-2 uppercase">Bar & Petiscaria</p>
-          </div>
+          <img 
+            src="/logo.png" 
+            alt="Mangueirão Logo" 
+            className="h-32 w-auto object-contain"
+          />
         </div>
 
         {/* PIN Display - Cleaner */}

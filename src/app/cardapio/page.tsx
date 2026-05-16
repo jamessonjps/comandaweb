@@ -76,15 +76,25 @@ function CardapioContent() {
           ) : filteredProdutos.length > 0 ? (
             filteredProdutos.map(produto => {
               const itemNoCarrinho = itensCarrinho.find(i => i.produto_id === produto.id);
+              const isEsgotado = produto.estoque_atual === 0;
               
               return (
-                <div key={produto.id} className="bistro-card flex items-center justify-between gap-4">
+                <div key={produto.id} className={`bistro-card flex items-center justify-between gap-4 ${isEsgotado ? 'opacity-60' : ''}`}>
                   <div className="flex flex-col gap-1 flex-1">
-                    <span className="text-sm font-bold text-stone-900 uppercase tracking-tight">{produto.nome}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-stone-900 uppercase tracking-tight">{produto.nome}</span>
+                      {produto.volume_ml && (
+                        <span className="text-[10px] font-bold text-stone-400">{produto.volume_ml}ml</span>
+                      )}
+                    </div>
                     <span className="text-sm font-black text-stone-900 mt-1">{formatCurrency(produto.preco)}</span>
                   </div>
 
-                  {itemNoCarrinho ? (
+                  {isEsgotado ? (
+                    <span className="px-3 py-2 bg-stone-100 text-stone-400 text-[10px] font-bold uppercase tracking-widest rounded-xl">
+                      Esgotado
+                    </span>
+                  ) : itemNoCarrinho ? (
                     <div className="flex items-center gap-4 bg-stone-50 rounded-xl px-2 py-1 border border-stone-100">
                       <button 
                         onClick={() => atualizarQuantidade(produto.id, -1)}
