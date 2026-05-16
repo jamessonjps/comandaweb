@@ -9,10 +9,10 @@ import { supabase } from '@/lib/supabase';
 import { 
   UserPlus, 
   Trash2, 
-  Shield, 
   ShieldCheck, 
   UserCircle,
-  AlertTriangle
+  AlertTriangle,
+  Edit2
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 
@@ -21,6 +21,7 @@ interface Perfil {
   nome: string;
   nivel_acesso: 'garcom' | 'caixa' | 'admin';
   ativo: boolean;
+  pin_hash: string;
 }
 
 export default function AdminUsuariosPage() {
@@ -28,14 +29,16 @@ export default function AdminUsuariosPage() {
   const user = useAuthStore((state) => state.user);
   const [perfis, setPerfis] = useState<Perfil[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingPerfil, setEditingPerfil] = useState<Partial<Perfil>>({});
 
-  // Proteção de rota
   if (!user || user.nivel_acesso !== 'admin') {
     router.push('/mesas');
     return null;
   }
 
   const fetchPerfis = async () => {
+    setIsLoading(true);
     const { data, error } = await supabase
       .from('perfis')
       .select('*')
@@ -58,24 +61,80 @@ export default function AdminUsuariosPage() {
     if (!error) fetchPerfis();
   };
 
+  const handleEdit = (perfil: Perfil) => {
+    setEditingPerfil(perfil);
+    setIsEditing(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingPerfil.id) return;
+    setIsLoading(true);
+    const { error } = await supabase
+      .from('perfis')
+      .update({
+        nome: editingPerfil.nome,
+        nivel_acesso: editingPerfil.nivel_acesso,
+        pin_hash: editingPerfil.pin_hash
+      })
+      .eq('id', editingPerfil.id);
+    
+    if (!error) {
+      setIsEditing(false);
+      fetchPerfis();
+    }
+    setIsLoading(false);
+  };
+
   return (
     <div className="min-h-screen bg-stone-50 pb-32 font-sans">
       <AppHeader title="Funcionários" showBack={true} />
 
       <main className="px-6 py-6 flex flex-col gap-6">
-        {/* Ação de Novo Usuário */}
+        {/* Formulário de Edição */}
+        {isEditing && (
+          <div className="bistro-card bg-stone-900 text-white flex flex-col gap-4 mb-8 border-none shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300">
+            <h3 className="text-[10px] font-bold uppercase tracking-widest opacity-60">Editando Funcionário</h3>
+            <div className="flex flex-col gap-3">
+              <input 
+                type="text" 
+                placeholder="Nome Completo" 
+                value={editingPerfil.nome || ''}
+                onChange={(e) => setEditingPerfil({...editingPerfil, nome: e.target.value})}
+                className="bg-stone-800 border-none rounded-xl p-3 text-sm focus:ring-1 ring-stone-700 outline-none"
+              />
+              <input 
+                type="text" 
+                placeholder="PIN (6 dígitos)" 
+                maxLength={6}
+                value={editingPerfil.pin_hash || ''}
+                onChange={(e) => setEditingPerfil({...editingPerfil, pin_hash: e.target.value})}
+                className="bg-stone-800 border-none rounded-xl p-3 text-sm focus:ring-1 ring-stone-700 outline-none font-mono tracking-widest"
+              />
+              <select 
+                value={editingPerfil.nivel_acesso}
+                onChange={(e) => setEditingPerfil({...editingPerfil, nivel_acesso: e.target.value as any})}
+                className="bg-stone-800 border-none rounded-xl p-3 text-sm focus:ring-1 ring-stone-700 outline-none"
+              >
+                <option value="garcom">GARÇOM</option>
+                <option value="caixa">CAIXA</option>
+                <option value="admin">ADMINISTRADOR</option>
+              </select>
+            </div>
+            <div className="flex gap-2 mt-2">
+              <button onClick={() => setIsEditing(false)} className="flex-1 p-3 text-xs font-bold uppercase tracking-widest opacity-60">Cancelar</button>
+              <button onClick={handleSaveEdit} className="flex-1 bg-white text-stone-900 p-3 rounded-xl text-xs font-bold uppercase tracking-widest">Salvar</button>
+            </div>
+          </div>
+        )}
+
         <button className="w-full bg-stone-900 text-white p-5 rounded-2xl shadow-xl flex items-center justify-center gap-3 font-bold uppercase tracking-widest active:scale-[0.98] transition-all">
           <UserPlus size={20} />
-          CADASTRAR NOVO FUNCIONÁRIO
+          CADASTRAR NOVO
         </button>
 
-        {/* Lista de Funcionários */}
         <div className="flex flex-col gap-4">
-          <h2 className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.3em] px-1">
-            Equipe Ativa
-          </h2>
-
-          {isLoading ? (
+          <h2 className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.3em] px-1">Equipe Ativa</h2>
+          {isLoading && !perfis.length ? (
             <div className="py-20 flex justify-center">
               <div className="w-10 h-10 border-4 border-stone-900 border-t-transparent rounded-full animate-spin" />
             </div>
@@ -92,18 +151,14 @@ export default function AdminUsuariosPage() {
                       <Badge variant={perfil.nivel_acesso === 'admin' ? 'info' : 'default'}>
                         {perfil.nivel_acesso}
                       </Badge>
-                      {!perfil.ativo && (
-                        <span className="text-[9px] font-bold text-red-600 uppercase tracking-widest bg-red-50 px-2 py-0.5 rounded-full">Inativo</span>
-                      )}
                     </div>
                   </div>
                 </div>
-
                 <div className="flex gap-2">
-                  <button 
-                    onClick={() => handleToggleStatus(perfil.id, perfil.ativo)}
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${perfil.ativo ? 'text-red-400 bg-red-50' : 'text-green-600 bg-green-50'}`}
-                  >
+                  <button onClick={() => handleEdit(perfil)} className="w-10 h-10 rounded-xl bg-stone-50 text-stone-900 flex items-center justify-center active:scale-90">
+                    <Edit2 size={18} />
+                  </button>
+                  <button onClick={() => handleToggleStatus(perfil.id, perfil.ativo)} className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${perfil.ativo ? 'text-red-400 bg-red-50' : 'text-green-600 bg-green-50'}`}>
                     {perfil.ativo ? <Trash2 size={18} /> : <UserPlus size={18} />}
                   </button>
                 </div>
@@ -111,16 +166,7 @@ export default function AdminUsuariosPage() {
             ))
           )}
         </div>
-
-        {/* Aviso de Segurança */}
-        <div className="flex gap-3 p-4 bg-amber-50 rounded-2xl border border-amber-100">
-          <AlertTriangle className="text-amber-600 shrink-0" size={20} />
-          <p className="text-[10px] text-amber-800 font-medium leading-relaxed">
-            Alterar permissões de acesso pode desconectar o usuário imediatamente. Tenha cautela ao remover administradores.
-          </p>
-        </div>
       </main>
-
       <BottomNav />
     </div>
   );

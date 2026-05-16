@@ -31,18 +31,27 @@ export default function LoginPage() {
 
     setIsLoading(true);
     try {
-      if (pin === '1234') {
-        login({ id: '1', nome: 'Garçom Teste', nivel_acesso: 'garcom' });
-        router.push('/mesas');
-      } else if (pin === '5678') {
-        login({ id: '2', nome: 'Administrador', nivel_acesso: 'admin' });
-        router.push('/mesas');
-      } else {
-        setError('PIN INCORRETO');
+      // Busca real no banco de dados pelo PIN
+      const { data, error } = await supabase
+        .from('perfis')
+        .select('*')
+        .eq('pin_hash', pin) // No MVP usamos o PIN direto, em prod usaríamos hash
+        .eq('ativo', true)
+        .single();
+
+      if (error || !data) {
+        setError('PIN INCORRETO OU INATIVO');
         setPin('');
+      } else {
+        login({ 
+          id: data.id, 
+          nome: data.nome, 
+          nivel_acesso: data.nivel_acesso 
+        });
+        router.push('/mesas');
       }
     } catch (err) {
-      setError('ERRO NO LOGIN');
+      setError('ERRO NO SERVIDOR');
     } finally {
       setIsLoading(false);
     }
