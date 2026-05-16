@@ -24,6 +24,11 @@ export interface Comanda {
   mesa: {
     numero: number;
   };
+  clientes?: {
+    nome: string;
+    telefone?: string;
+    whatsapp?: string;
+  };
 }
 
 export function useComanda(mesaId: string) {
@@ -36,7 +41,7 @@ export function useComanda(mesaId: string) {
       // 1. Busca comanda ativa para a mesa
       const { data: comandaData, error: comandaError } = await supabase
         .from('comandas')
-        .select('*, mesa:mesas(numero)')
+        .select('*, mesa:mesas(numero), clientes(*)')
         .eq('mesa_id', mesaId)
         .in('status', ['aberta', 'fechando'])
         .maybeSingle();
