@@ -23,7 +23,7 @@ export const Button = ({
     <button
       className={`min-h-[48px] px-6 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${className}`}
       disabled={isLoading || props.disabled}
-      ...props
+      {...props}
     >
       {isLoading ? (
         <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
