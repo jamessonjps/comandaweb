@@ -109,7 +109,7 @@ export default function CaixaDashboardPage() {
                     <span className="text-2xl font-black text-text-primary">Mesa {comanda.mesa.numero}</span>
                     <div className="flex items-center gap-2 text-xs text-text-muted">
                       <Clock size={12} />
-                      <span>Aberta em {new Date(comanda.aberta_em).toLocaleTimeString([], { hour: '2d', minute: '2d' })}</span>
+                      <span>Aberta em {new Date(comanda.aberta_em).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                   </div>
                   <Badge variant={comanda.status === 'fechando' ? 'warning' : 'info'}>
