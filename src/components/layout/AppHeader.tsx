@@ -55,7 +55,9 @@ export function AppHeader({
             {showUser && user && (
               <div className="flex flex-col items-end">
                 <span className="text-[8px] font-black text-stone-900 uppercase leading-none">{user.nome.split(' ')[0]}</span>
-                <span className="text-[7px] font-bold text-stone-400 uppercase tracking-tighter mt-0.5">{user.nivel_acesso}</span>
+                <span className="text-[7px] font-bold text-stone-400 uppercase tracking-tighter mt-0.5">
+                  {user.nivel_acesso === 'admin' ? 'GERENTE' : user.nivel_acesso}
+                </span>
               </div>
             )}
             {showUser && (
