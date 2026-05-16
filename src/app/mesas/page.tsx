@@ -9,7 +9,7 @@ import { useAuthStore } from '@/store/auth.store';
 import { UtensilsIcon, Search, Receipt } from 'lucide-react';
 
 export default function MesasPage() {
-  const { mesas, isLoading } = useRealtimeMesas();
+  const { mesas, isLoading, refresh } = useRealtimeMesas();
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
 
@@ -26,6 +26,15 @@ export default function MesasPage() {
       <AppHeader title="Mapa de Mesas" />
 
       <main className="px-6 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-sm font-bold text-stone-400 uppercase tracking-widest">Disponibilidade</h2>
+          <button 
+            onClick={() => refresh()}
+            className="w-8 h-8 rounded-lg bg-white border border-stone-200 text-stone-600 flex items-center justify-center active:rotate-180 transition-all duration-500 shadow-sm"
+          >
+            <RefreshCw size={16} />
+          </button>
+        </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
           {mesas.map((mesa) => (
             <div

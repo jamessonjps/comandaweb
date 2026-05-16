@@ -77,13 +77,29 @@ export default function ComandaDetalhesPage() {
     }
   };
 
+  const [isActionLoading, setIsActionLoading] = React.useState(false);
+
   const handleAbrirMesa = async () => {
-    if (!user) {
-      alert('ERRO: VOCÊ PRECISA ESTAR LOGADO. SAIA E ENTRE NOVAMENTE.');
-      return;
-    }
+    if (!user || isActionLoading) return;
+    setIsActionLoading(true);
 
     try {
+      // 1. Verificar se já não existe uma comanda aberta (Segurança de Duplicidade)
+      const { data: existenta } = await supabase
+        .from('comandas')
+        .select('id')
+        .eq('mesa_id', mesaId)
+        .in('status', ['aberta', 'fechando'])
+        .maybeSingle();
+
+      if (existenta) {
+        alert('ESTA MESA JÁ FOI ABERTA POR OUTRO USUÁRIO.');
+        await refresh();
+        setIsActionLoading(false);
+        return;
+      }
+
+      // 2. Abrir Comanda
       const { error } = await supabase
         .from('comandas')
         .insert({
@@ -95,23 +111,23 @@ export default function ComandaDetalhesPage() {
 
       if (error) {
         alert('ERRO AO ABRIR COMANDA: ' + error.message);
+        setIsActionLoading(false);
         return;
       }
 
-      const { error: mesaError } = await supabase
+      // 3. Atualizar Mesa
+      await supabase
         .from('mesas')
         .update({ status: 'ocupada' })
         .eq('id', mesaId);
 
-      if (mesaError) {
-        console.error('Erro ao atualizar mesa:', mesaError);
-      }
-
       await refresh();
 
     } catch (err: any) {
-      console.error('Erro ao abrir mesa:', err);
+      console.error('Erro fatal:', err);
       alert('ERRO DE CONEXÃO: ' + err.message);
+    } finally {
+      setIsActionLoading(false);
     }
   };
 
@@ -135,9 +151,10 @@ export default function ComandaDetalhesPage() {
               <span className="text-stone-400 text-[10px] font-bold uppercase tracking-widest text-center">Mesa Disponível</span>
               <button 
                 onClick={handleAbrirMesa} 
-                className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold uppercase tracking-widest active:scale-95 transition-all shadow-md"
+                disabled={isActionLoading}
+                className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold uppercase tracking-widest active:scale-95 transition-all shadow-md disabled:opacity-50"
               >
-                INICIAR COMANDA
+                {isActionLoading ? 'PROCESSANDO...' : 'INICIAR COMANDA'}
               </button>
             </div>
           ) : (

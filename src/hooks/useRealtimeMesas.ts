@@ -66,12 +66,14 @@ export function useRealtimeMesas() {
     fetchMesas();
 
     const channel = supabase
-      .channel('public:mesas')
+      .channel('public:mesas-realtime')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'mesas' }, 
-        () => {
-          fetchMesas(); // Recarrega tudo para garantir integridade (joins)
-        }
+        () => fetchMesas()
+      )
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'comandas' }, 
+        () => fetchMesas()
       )
       .on('system', {}, (payload: any) => {
         if (payload.status === 'CHANNEL_ERROR') setConnectionStatus('offline');
