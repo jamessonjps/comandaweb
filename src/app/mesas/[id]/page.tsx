@@ -12,7 +12,9 @@ import {
   Phone,
   XCircle,
   MinusCircle,
-  Smartphone
+  Smartphone,
+  Trash2,
+  Lock
 } from 'lucide-react';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Badge } from '@/components/ui/Badge';
@@ -34,6 +36,11 @@ export default function ComandaDetalhesPage() {
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
   
+  // Estados para Autorização por PIN
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+
   const [pagamentos, setPagamentos] = useState<{metodo: string, valor: number}[]>([]);
   const [metodoAtual, setMetodoAtual] = useState('dinheiro');
   const [valorAtual, setValorAtual] = useState('');
@@ -44,11 +51,35 @@ export default function ComandaDetalhesPage() {
   const faltaPagar = Math.max(0, totalComTaxa - jaPago);
   const troco = Math.max(0, jaPago - totalComTaxa);
 
+  const handleAuthAction = (action: () => void) => {
+    setPendingAction(() => action);
+    setShowPinModal(true);
+    setPinInput('');
+  };
+
+  const verifyPin = () => {
+    if (pinInput === '5678') { // PIN do Gerente
+      if (pendingAction) pendingAction();
+      setShowPinModal(false);
+      setPendingAction(null);
+    } else {
+      alert('PIN DE GERENTE INVÁLIDO!');
+      setPinInput('');
+    }
+  };
+
   const handleAddPagamento = () => {
     const valor = parseFloat(valorAtual);
     if (isNaN(valor) || valor <= 0) return;
     setPagamentos([...pagamentos, { metodo: metodoAtual, valor }]);
     setValorAtual('');
+  };
+
+  const handleCancelarItem = async (itemId: string) => {
+    handleAuthAction(async () => {
+      await supabase.from('itens_pedido').update({ status_item: 'cancelado' }).eq('id', itemId);
+      await refresh();
+    });
   };
 
   const handleFinalizarConta = async () => {
@@ -107,19 +138,51 @@ export default function ComandaDetalhesPage() {
     <div className="min-h-screen bg-stone-50 pb-48 font-sans">
       <AppHeader title={comanda ? `Mesa ${comanda.mesa.numero.toString().padStart(2, '0')}` : 'Novo Atendimento'} showUser={false} showBack={true} />
 
+      {/* MODAL DE PIN PARA AUTORIZAÇÃO */}
+      {showPinModal && (
+        <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6 animate-in fade-in duration-200">
+           <div className="bg-white w-full max-w-xs rounded-3xl p-6 flex flex-col items-center gap-6 shadow-2xl">
+              <div className="w-12 h-12 bg-stone-100 rounded-full flex items-center justify-center text-stone-900"><Lock size={20} /></div>
+              <div className="flex flex-col items-center text-center">
+                <h3 className="text-sm font-black uppercase tracking-widest">Autorização</h3>
+                <p className="text-[10px] font-bold text-stone-400 uppercase mt-1">PIN do Gerente para Cancelar</p>
+              </div>
+              <input type="password" value={pinInput} onChange={(e) => setPinInput(e.target.value)} className="w-full bg-stone-50 border rounded-2xl p-4 text-center text-2xl font-black tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-stone-900" autoFocus />
+              <div className="grid grid-cols-2 gap-3 w-full">
+                 <button onClick={() => { setShowPinModal(false); setPendingAction(null); }} className="py-3 text-[10px] font-bold uppercase text-stone-400 bg-stone-50 rounded-xl">Sair</button>
+                 <button onClick={verifyPin} className="py-3 text-[10px] font-bold uppercase text-white bg-stone-900 rounded-xl">Confirmar</button>
+              </div>
+           </div>
+        </div>
+      )}
+
       {showCheckout && comanda && (
         <div className="fixed inset-0 bg-stone-900/95 z-50 p-6 flex flex-col gap-4 overflow-y-auto">
           <div className="flex justify-between items-center text-white"><h2 className="text-xl font-black uppercase tracking-tighter">Mesa {comanda.mesa.numero}</h2><button onClick={() => setShowCheckout(false)}><XCircle size={32} /></button></div>
           <div className="bg-white rounded-3xl p-6 flex flex-col gap-4">
+            
+            <div className="flex flex-col gap-2 max-h-32 overflow-y-auto bg-stone-50 p-3 rounded-2xl border border-stone-100">
+               {itens.map(item => (
+                 <div key={item.id} className="flex justify-between items-center text-[10px] font-bold uppercase">
+                    <span className="text-stone-600">{item.quantidade}x {item.produto.nome}</span>
+                    <div className="flex items-center gap-2">
+                       <span>{formatCurrency(item.preco_unitario_congelado * item.quantidade)}</span>
+                       <button onClick={() => handleCancelarItem(item.id)} className="text-red-500"><Trash2 size={12} /></button>
+                    </div>
+                 </div>
+               ))}
+            </div>
+
             <div className="flex justify-between border-b pb-4"><span className="text-stone-400 text-[10px] font-bold uppercase tracking-widest">Subtotal</span><span className="font-bold text-lg">{formatCurrency(comanda.total_calculado)}</span></div>
             <div className="flex justify-between items-center py-2"><span className="text-sm font-black uppercase">Total com 10%</span><span className="text-3xl font-black text-stone-900">{formatCurrency(totalComTaxa)}</span></div>
+            {/* ... (restante do checkout mantido) */}
             <div className="flex gap-2">
               <select value={metodoAtual} onChange={(e) => setMetodoAtual(e.target.value)} className="flex-1 bg-stone-50 border rounded-xl p-3 text-xs font-bold uppercase"><option value="dinheiro">Dinheiro</option><option value="pix">PIX</option><option value="cartao_debito">C. Débito</option><option value="cartao_credito">C. Crédito</option><option value="fiado">Fiado</option></select>
               <input type="number" placeholder="Valor" value={valorAtual} onChange={(e) => setValorAtual(e.target.value)} className="w-24 bg-stone-50 border rounded-xl p-3 text-xs font-bold" />
               <button onClick={handleAddPagamento} className="w-12 h-12 bg-stone-900 text-white rounded-xl flex items-center justify-center"><Plus /></button>
             </div>
             <div className="flex flex-col gap-1">
-              {pagamentos.map((p, i) => (<div key={i} className="flex justify-between items-center bg-stone-50 p-2 rounded-lg text-[10px] font-bold uppercase"><span>{p.metodo}</span><div className="flex items-center gap-2"><span>{formatCurrency(p.valor)}</span>{user?.nivel_acesso === 'GERENTE' && <button onClick={() => setPagamentos(pagamentos.filter((_, idx) => idx !== i))} className="text-red-500"><MinusCircle size={14} /></button>}</div></div>))}
+              {pagamentos.map((p, i) => (<div key={i} className="flex justify-between items-center bg-stone-50 p-2 rounded-lg text-[10px] font-bold uppercase"><span>{p.metodo}</span><div className="flex items-center gap-2"><span>{formatCurrency(p.valor)}</span><button onClick={() => setPagamentos(pagamentos.filter((_, idx) => idx !== i))} className="text-red-500"><MinusCircle size={14} /></button></div></div>))}
             </div>
             <div className="bg-stone-900 text-white p-5 rounded-2xl flex justify-between items-center mt-2 shadow-xl">
               <div className="flex flex-col"><span className="text-[8px] uppercase opacity-60">Troco</span><span className="text-xl font-black">{troco > 0 ? formatCurrency(troco) : formatCurrency(faltaPagar)}</span></div>
@@ -163,7 +226,11 @@ export default function ComandaDetalhesPage() {
               ) : (
                 itens.map((item) => (
                   <div key={item.id} className="flex justify-between bg-white p-4 rounded-xl border text-xs font-bold uppercase shadow-sm">
-                    <span>{item.quantidade}x {item.produto.nome}</span><span>{formatCurrency(item.preco_unitario_congelado * item.quantidade)}</span>
+                    <span>{item.quantidade}x {item.produto.nome}</span>
+                    <div className="flex items-center gap-3">
+                      <span>{formatCurrency(item.preco_unitario_congelado * item.quantidade)}</span>
+                      <button onClick={() => handleCancelarItem(item.id)} className="text-red-500"><Trash2 size={14} /></button>
+                    </div>
                   </div>
                 ))
               )}
