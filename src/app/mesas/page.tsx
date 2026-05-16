@@ -3,6 +3,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { AppHeader } from '@/components/layout/AppHeader';
+import { BottomNav } from '@/components/layout/BottomNav';
 import { useRealtimeMesas } from '@/hooks/useRealtimeMesas';
 import { useAuthStore } from '@/store/auth.store';
 import { UtensilsIcon, Search, Receipt } from 'lucide-react';
