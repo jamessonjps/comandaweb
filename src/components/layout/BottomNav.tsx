@@ -15,10 +15,10 @@ export const BottomNav = () => {
   const tabs = [
     { id: 'mesas', label: 'Mesas', icon: Utensils, path: '/mesas' },
     { id: 'cardapio', label: 'Cardápio', icon: Search, path: '/cardapio' },
-    ...(user.nivel_acesso === 'caixa' || user.nivel_acesso === 'admin' ? [
+    ...(user.nivel_acesso === 'caixa' || user.nivel_acesso === 'admin' || user.nivel_acesso === 'GERENTE' ? [
       { id: 'caixa', label: 'Caixa', icon: Receipt, path: '/caixa' }
     ] : []),
-    ...(user.nivel_acesso === 'admin' ? [
+    ...(user.nivel_acesso === 'admin' || user.nivel_acesso === 'GERENTE' ? [
       { id: 'admin', label: 'Admin', icon: Settings, path: '/admin' }
     ] : [])
   ];
