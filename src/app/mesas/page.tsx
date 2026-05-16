@@ -4,7 +4,7 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { useRealtimeMesas } from '@/hooks/useRealtimeMesas';
-import { useAuthStore } from '@/store/useAuthStore';
+import { useAuthStore } from '@/store/auth.store';
 import { UtensilsIcon, Search, Receipt } from 'lucide-react';
 
 export default function MesasPage() {

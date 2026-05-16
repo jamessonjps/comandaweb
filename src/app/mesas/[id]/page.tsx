@@ -39,10 +39,10 @@ export default function ComandaDetalhesPage() {
       if (error) throw error;
       
       limparCarrinho();
-      alert('Pedido enviado com sucesso!');
+      alert('PEDIDO ENVIADO!');
     } catch (err) {
       console.error('Erro ao enviar pedido:', err);
-      alert('Erro ao enviar pedido.');
+      alert('ERRO AO ENVIAR.');
     }
   };
 
@@ -72,15 +72,13 @@ export default function ComandaDetalhesPage() {
   const handleAbrirMesa = async () => {
     if (!user) return;
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('comandas')
         .insert({
           mesa_id: mesaId,
-          garcom_id: user.id,
-          status: 'aberta'
-        })
-        .select()
-        .single();
+          criado_por: user.id,
+          status_pagamento: 'Pendente'
+        });
 
       if (error) throw error;
 
@@ -89,16 +87,17 @@ export default function ComandaDetalhesPage() {
         .update({ status: 'ocupada' })
         .eq('id', mesaId);
 
-      // O hook useComanda irá atualizar automaticamente via Realtime
     } catch (err) {
       console.error('Erro ao abrir mesa:', err);
     }
   };
 
-  if (isLoading) return <div className="min-h-screen bg-bg-base" />;
+  if (isLoading) return <div className="min-h-screen bg-amber-50 flex items-center justify-center">
+    <div className="w-12 h-12 border-4 border-amber-950 border-t-transparent rounded-full animate-spin" />
+  </div>;
 
   return (
-    <div className="min-h-screen bg-bg-base pb-40">
+    <div className="min-h-screen bg-amber-50 pb-48 font-serif">
       <AppHeader 
         title={comanda ? `Mesa ${comanda.mesa.numero.toString().padStart(2, '0')}` : 'Abrir Mesa'} 
         showUser={false} 
@@ -106,28 +105,28 @@ export default function ComandaDetalhesPage() {
       />
 
       <main className="px-6 py-4 flex flex-col gap-6">
-        {/* Header de Info */}
-        <div className="flex items-center justify-between bg-bg-surface p-4 rounded-2xl border border-border">
+        {/* Header de Info Estilo Gravura */}
+        <div className="woodcut-card bg-amber-100 flex items-center justify-between">
           {!comanda ? (
-            <div className="flex flex-col gap-1">
-              <span className="text-text-secondary text-sm">Esta mesa está livre</span>
-              <Button onClick={handleAbrirMesa} variant="primary" className="mt-2">
-                Abrir Nova Comanda
+            <div className="flex flex-col gap-1 w-full">
+              <span className="text-amber-900 text-xs font-black uppercase tracking-widest">Mesa Disponível</span>
+              <Button onClick={handleAbrirMesa} variant="primary" className="mt-2 w-full">
+                INICIAR COMANDA
               </Button>
             </div>
           ) : (
             <>
               <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2 text-text-muted text-xs uppercase tracking-wider font-bold">
+                <div className="flex items-center gap-2 text-amber-900 text-[10px] uppercase tracking-[0.2em] font-black">
                   <Clock size={12} />
-                  <span>Aberta há {formatElapsedTime(comanda.aberta_em)}</span>
+                  <span>Há {formatElapsedTime(comanda.aberta_em)}</span>
                 </div>
-                <div className="text-2xl font-display font-black text-accent">
+                <div className="text-3xl font-display font-black text-amber-950">
                   {formatCurrency(comanda.total_calculado)}
                 </div>
               </div>
               <Badge variant={comanda.status === 'fechando' ? 'warning' : 'info'}>
-                {comanda.status.toUpperCase()}
+                {comanda.status}
               </Badge>
             </>
           )}
@@ -136,34 +135,29 @@ export default function ComandaDetalhesPage() {
         {/* Lista de Itens Já Pedidos */}
         {comanda && (
           <div className="flex flex-col gap-4">
-            <h2 className="text-sm font-bold text-text-secondary uppercase tracking-widest px-1">
-              Itens do Pedido
+            <h2 className="text-xs font-display font-black text-amber-900 uppercase tracking-[0.3em] px-1 border-b-2 border-amber-950 pb-2">
+              Consumo Local
             </h2>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-3">
               {itens.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 text-text-muted gap-2 opacity-50">
+                <div className="flex flex-col items-center justify-center py-10 text-amber-900/20 gap-2">
                   <AlertCircle size={32} />
-                  <span className="text-sm">Nenhum item lançado ainda</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">Comanda Vazia</span>
                 </div>
               ) : (
                 itens.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between bg-bg-surface/50 p-3 rounded-xl border border-border/50">
+                  <div key={item.id} className="flex items-center justify-between bg-white/50 p-3 border-2 border-amber-950/20 border-dashed">
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium text-text-primary">
+                      <span className="text-sm font-display font-black text-amber-950 uppercase">
                         {item.quantidade}x {item.produto.nome}
                       </span>
                       {item.observacao && (
-                        <span className="text-[10px] text-text-muted italic">"{item.observacao}"</span>
+                        <span className="text-[10px] text-amber-800 italic">"{item.observacao}"</span>
                       )}
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <span className="text-xs font-bold text-text-secondary">
-                        {formatCurrency(item.preco_unitario * item.quantidade)}
-                      </span>
-                      <Badge variant={item.status_item === 'entregue' ? 'success' : 'default'}>
-                        {item.status_item}
-                      </Badge>
-                    </div>
+                    <span className="text-sm font-display font-black text-amber-950">
+                      {formatCurrency(item.preco_unitario_congelado * item.quantidade)}
+                    </span>
                   </div>
                 ))
               )}
@@ -171,21 +165,21 @@ export default function ComandaDetalhesPage() {
           </div>
         )}
 
-        {/* Itens no Carrinho (Ainda não enviados) */}
+        {/* Itens no Carrinho (Aguardando Envio) */}
         {itensCarrinho.length > 0 && (
           <div className="flex flex-col gap-4">
-            <h2 className="text-sm font-bold text-accent uppercase tracking-widest px-1 flex items-center gap-2">
-              Novos Itens (Aguardando Envio)
+            <h2 className="text-xs font-display font-black text-red-900 uppercase tracking-[0.3em] px-1">
+              Novos Itens (A ENVIAR)
             </h2>
             <div className="flex flex-col gap-2">
               {itensCarrinho.map((item) => (
-                <div key={item.produto_id} className="flex items-center justify-between bg-accent/5 p-3 rounded-xl border border-accent/20">
+                <div key={item.produto_id} className="flex items-center justify-between bg-red-50 p-3 border-2 border-red-900/30 border-dashed">
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold text-text-primary">
+                    <span className="text-sm font-display font-black text-red-950 uppercase">
                       {item.quantidade}x {item.nome}
                     </span>
                   </div>
-                  <span className="text-sm font-black text-accent">
+                  <span className="text-sm font-display font-black text-red-900">
                     {formatCurrency(item.preco_unitario * item.quantidade)}
                   </span>
                 </div>
@@ -195,38 +189,41 @@ export default function ComandaDetalhesPage() {
         )}
       </main>
 
-      {/* Footer Fixo */}
-      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-bg-base via-bg-base to-transparent flex flex-col gap-3">
+      {/* Ações Fixas Vintage */}
+      <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-amber-50 to-transparent flex flex-col gap-4 z-40">
         {itensCarrinho.length > 0 ? (
-          <Button onClick={handleEnviarPedido} variant="primary" className="w-full py-6 text-lg shadow-fab">
+          <button 
+            onClick={handleEnviarPedido} 
+            className="w-full bg-amber-950 text-amber-50 p-5 shadow-[6px_6px_0px_0px_#78350F] flex items-center justify-center gap-3 font-display font-black uppercase tracking-widest active:translate-x-1 active:translate-y-1 active:shadow-none transition-all"
+          >
             <Send size={20} />
-            Enviar Pedido ({formatCurrency(totalCarrinho)})
-          </Button>
+            ENVIAR PEDIDO ({formatCurrency(totalCarrinho)})
+          </button>
         ) : comanda && (
-          <div className="flex gap-3">
-            <Button 
+          <div className="flex gap-4">
+            <button 
               onClick={() => router.push(`/cardapio?mesaId=${mesaId}`)} 
-              variant="secondary" 
-              className="flex-1 py-4"
+              className="flex-1 bg-amber-100 border-2 border-amber-950 p-4 shadow-[4px_4px_0px_0px_#451A03] flex items-center justify-center gap-2 font-display font-black text-xs uppercase tracking-widest active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
             >
-              <Plus size={20} />
-              Adicionar
-            </Button>
-            <Button 
+              <Plus size={18} />
+              ADICIONAR
+            </button>
+            <button 
               onClick={handleSolicitarFechamento} 
-              variant="secondary" 
-              className="flex-1 py-4 border-warning/30 text-warning"
               disabled={comanda.status === 'fechando'}
+              className="flex-1 bg-amber-950 text-amber-50 p-4 shadow-[4px_4px_0px_0px_#78350F] flex items-center justify-center gap-2 font-display font-black text-xs uppercase tracking-widest disabled:opacity-50 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
             >
-              <Receipt size={20} />
-              Fechar Conta
-            </Button>
+              <Receipt size={18} />
+              FECHAR CONTA
+            </button>
           </div>
         )}
-        <Button onClick={() => router.back()} variant="ghost" className="w-full text-text-muted">
-          <ArrowLeft size={16} />
-          Voltar para Mesas
-        </Button>
+        <button 
+          onClick={() => router.back()} 
+          className="w-full text-amber-900/60 font-display font-black text-[10px] uppercase tracking-[0.4em] py-2"
+        >
+          ← Voltar para Mesas
+        </button>
       </div>
     </div>
   );

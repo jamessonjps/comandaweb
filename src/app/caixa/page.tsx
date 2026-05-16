@@ -8,12 +8,12 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency } from '@/utils/formatters';
-import { Receipt, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import { Receipt, CheckCircle, Clock } from 'lucide-react';
 
 interface ComandaCaixa {
   id: string;
   mesa_id: string;
-  total_calculado: number;
+  total: number;
   status: string;
   aberta_em: string;
   mesa: {
@@ -30,7 +30,7 @@ export default function CaixaDashboardPage() {
       .from('comandas')
       .select('*, mesa:mesas(numero)')
       .in('status', ['aberta', 'fechando'])
-      .order('status', { ascending: false }); // 'fechando' primeiro
+      .order('status', { ascending: false });
 
     if (!error) setComandas(data || []);
     setIsLoading(false);
@@ -45,16 +45,15 @@ export default function CaixaDashboardPage() {
   }, []);
 
   const handleFecharPagamento = async (comandaId: string, mesaId: string) => {
-    const forma = confirm("Confirmar pagamento em DINHEIRO?");
+    const forma = confirm("CONFIRMAR PAGAMENTO?");
     if (!forma) return;
 
     try {
       const { error } = await supabase
         .from('comandas')
         .update({ 
-          status: 'paga', 
-          fechada_em: new Date().toISOString(),
-          forma_pagamento: 'dinheiro' 
+          status_pagamento: 'Pago',
+          status: 'paga'
         })
         .eq('id', comandaId);
 
@@ -65,73 +64,76 @@ export default function CaixaDashboardPage() {
         .update({ status: 'livre' })
         .eq('id', mesaId);
 
-      alert("Comanda fechada com sucesso!");
+      alert("PAGAMENTO REGISTRADO!");
     } catch (err) {
       console.error(err);
-      alert("Erro ao fechar comanda.");
+      alert("ERRO AO PROCESSAR.");
     }
   };
 
   return (
-    <div className="min-h-screen bg-bg-base pb-32">
+    <div className="min-h-screen bg-amber-50 pb-32 font-serif">
       <AppHeader title="Caixa" showBack={true} />
 
       <main className="px-6 py-6 flex flex-col gap-6">
-        {/* Resumo Rápido */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-bg-surface p-4 rounded-2xl border border-border flex flex-col gap-1">
-            <span className="text-[10px] text-text-muted uppercase font-bold">Em Aberto</span>
-            <span className="text-xl font-black text-text-primary">{comandas.length}</span>
+        {/* Resumo Rápido Estilo Gravura */}
+        <div className="grid grid-cols-2 gap-6">
+          <div className="woodcut-card bg-amber-100 flex flex-col gap-1 p-4">
+            <span className="text-[10px] text-amber-900 uppercase font-black tracking-widest">Abertas</span>
+            <span className="text-2xl font-display font-black text-amber-950">{comandas.length}</span>
           </div>
-          <div className="bg-bg-surface p-4 rounded-2xl border border-border flex flex-col gap-1">
-            <span className="text-[10px] text-text-muted uppercase font-bold">Total Pendente</span>
-            <span className="text-xl font-black text-accent">
-              {formatCurrency(comandas.reduce((acc, c) => acc + c.total_calculado, 0))}
+          <div className="woodcut-card bg-amber-100 flex flex-col gap-1 p-4">
+            <span className="text-[10px] text-amber-900 uppercase font-black tracking-widest">Pendente</span>
+            <span className="text-xl font-display font-black text-amber-950 leading-tight">
+              {formatCurrency(comandas.reduce((acc, c) => acc + c.total, 0))}
             </span>
           </div>
         </div>
 
-        <h2 className="text-sm font-bold text-text-secondary uppercase tracking-widest px-1">
+        <h2 className="text-sm font-display font-black text-amber-950 uppercase tracking-[0.2em] px-1 border-b-2 border-amber-950 pb-2">
           Comandas Ativas
         </h2>
 
-        <div className="flex flex-col gap-4">
-          {comandas.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-text-muted opacity-50">
-              <CheckCircle size={48} className="mb-2" />
-              <span>Nenhuma comanda aberta</span>
+        <div className="flex flex-col gap-6">
+          {isLoading ? (
+            <div className="py-20 flex justify-center">
+              <div className="w-10 h-10 border-4 border-amber-950 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : comandas.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-amber-900/30">
+              <CheckCircle size={64} className="mb-4" />
+              <span className="font-display font-black uppercase tracking-widest">Tudo em dia!</span>
             </div>
           ) : (
             comandas.map((comanda) => (
-              <Card key={comanda.id} className={`flex flex-col gap-4 ${comanda.status === 'fechando' ? 'border-warning' : ''}`}>
+              <div key={comanda.id} className="woodcut-card bg-white flex flex-col gap-4">
                 <div className="flex justify-between items-start">
                   <div className="flex flex-col">
-                    <span className="text-2xl font-black text-text-primary">Mesa {comanda.mesa.numero}</span>
-                    <div className="flex items-center gap-2 text-xs text-text-muted">
+                    <span className="text-3xl font-display font-black text-amber-950">MESA {comanda.mesa.numero}</span>
+                    <div className="flex items-center gap-2 text-[10px] text-amber-900 font-bold uppercase tracking-wider mt-1">
                       <Clock size={12} />
-                      <span>Aberta em {new Date(comanda.aberta_em).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span>Desde {new Date(comanda.aberta_em).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                   </div>
                   <Badge variant={comanda.status === 'fechando' ? 'warning' : 'info'}>
-                    {comanda.status === 'fechando' ? 'AGUARDANDO PAGAMENTO' : 'EM CONSUMO'}
+                    {comanda.status}
                   </Badge>
                 </div>
 
-                <div className="flex justify-between items-center pt-4 border-t border-border">
+                <div className="flex justify-between items-end pt-4 border-t-2 border-amber-950 border-dashed">
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-text-muted uppercase font-bold">Total</span>
-                    <span className="text-xl font-black text-accent">{formatCurrency(comanda.total_calculado)}</span>
+                    <span className="text-[10px] text-amber-900 uppercase font-black tracking-widest">Total</span>
+                    <span className="text-2xl font-display font-black text-amber-950">{formatCurrency(comanda.total)}</span>
                   </div>
                   <Button 
                     onClick={() => handleFecharPagamento(comanda.id, comanda.mesa_id)}
                     variant={comanda.status === 'fechando' ? 'primary' : 'secondary'}
-                    className="px-6"
                   >
                     <Receipt size={18} />
-                    Receber
+                    RECEBER
                   </Button>
                 </div>
-              </Card>
+              </div>
             ))
           )}
         </div>

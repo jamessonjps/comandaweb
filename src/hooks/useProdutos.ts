@@ -6,35 +6,31 @@ import { supabase } from '@/lib/supabase';
 export interface Produto {
   id: string;
   nome: string;
-  descricao?: string;
   preco: number;
-  categoria_id: string;
-  imagem_url?: string;
-}
-
-export interface Categoria {
-  id: string;
-  nome: string;
+  categoria: string;
+  ativo: boolean;
 }
 
 export function useProdutos() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [categorias, setCategorias] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [prodRes, catRes] = await Promise.all([
-          supabase.from('produtos').select('*').eq('disponivel', true).order('ordem', { ascending: true }),
-          supabase.from('categorias').select('*').eq('ativo', true).order('ordem', { ascending: true })
-        ]);
+        const { data, error } = await supabase
+          .from('produtos')
+          .select('*')
+          .eq('ativo', true);
 
-        if (prodRes.error) throw prodRes.error;
-        if (catRes.error) throw catRes.error;
+        if (error) throw error;
 
-        setProdutos(prodRes.data || []);
-        setCategorias(catRes.data || []);
+        setProdutos(data || []);
+        
+        // Extrair categorias únicas
+        const uniqueCats = Array.from(new Set((data || []).map(p => p.categoria)));
+        setCategorias(uniqueCats);
       } catch (err) {
         console.error('Erro ao carregar produtos:', err);
       } finally {
