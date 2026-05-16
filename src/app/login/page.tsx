@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Delete, Lock, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
+import { supabase } from '@/lib/supabase';
 
 export default function LoginPage() {
   const [pin, setPin] = useState('');
