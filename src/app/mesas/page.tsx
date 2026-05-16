@@ -34,17 +34,15 @@ export default function MesasPage() {
               className="bistro-card bistro-card-hover flex flex-col items-center justify-center gap-4 aspect-square"
             >
               <div className="relative">
-                <div className={`w-16 h-16 rounded-full border-2 border-stone-100 flex items-center justify-center font-display font-black text-2xl shadow-inner
-                  ${mesa.status === 'livre' ? 'bg-green-50 text-green-700' : mesa.status === 'ocupada' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}
-                >
-                  {mesa.id}
+                <div className="w-16 h-16 rounded-full border border-stone-100 bg-white flex items-center justify-center font-display font-black text-2xl shadow-inner text-stone-900">
+                  {mesa.numero.toString().padStart(2, '0')}
                 </div>
-                <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full border-4 border-white
+                <div className={`absolute -top-1 -right-1 w-5 h-5 rounded-full border-4 border-stone-50
                   ${mesa.status === 'livre' ? 'bg-green-500' : mesa.status === 'ocupada' ? 'bg-red-500' : 'bg-amber-500'}`} 
                 />
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400">
-                {mesa.status}
+              <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-stone-400">
+                Mesa {mesa.status}
               </span>
             </div>
           ))}
