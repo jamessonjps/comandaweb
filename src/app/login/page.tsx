@@ -35,7 +35,7 @@ export default function LoginPage() {
         login({ id: '1', nome: 'Garçom Teste', nivel_acesso: 'garcom' });
         router.push('/mesas');
       } else if (pin === '5678') {
-        login({ id: '2', nome: 'Caixa Teste', nivel_acesso: 'caixa' });
+        login({ id: '2', nome: 'Administrador', nivel_acesso: 'admin' });
         router.push('/mesas');
       } else {
         setError('PIN INCORRETO');

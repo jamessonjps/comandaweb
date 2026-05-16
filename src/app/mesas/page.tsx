@@ -41,8 +41,12 @@ export default function MesasPage() {
                   ${mesa.status === 'livre' ? 'bg-green-500' : mesa.status === 'ocupada' ? 'bg-red-500' : 'bg-amber-500'}`} 
                 />
               </div>
-              <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-stone-400">
-                Mesa {mesa.status}
+              <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-stone-400 text-center px-2 line-clamp-1">
+                {mesa.cliente_nome ? (
+                  <span className="text-stone-900">{mesa.cliente_nome}</span>
+                ) : (
+                  `Mesa ${mesa.status}`
+                )}
               </span>
             </div>
           ))}

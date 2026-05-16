@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { Utensils, Search, Receipt } from 'lucide-react';
+import { Utensils, Search, Receipt, Settings } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 
 export const BottomNav = () => {
@@ -15,8 +15,11 @@ export const BottomNav = () => {
   const tabs = [
     { id: 'mesas', label: 'Mesas', icon: Utensils, path: '/mesas' },
     { id: 'cardapio', label: 'Cardápio', icon: Search, path: '/cardapio' },
-    ...(user.nivel_acesso === 'caixa' ? [
+    ...(user.nivel_acesso === 'caixa' || user.nivel_acesso === 'admin' ? [
       { id: 'caixa', label: 'Caixa', icon: Receipt, path: '/caixa' }
+    ] : []),
+    ...(user.nivel_acesso === 'admin' ? [
+      { id: 'admin', label: 'Admin', icon: Settings, path: '/admin' }
     ] : [])
   ];
 

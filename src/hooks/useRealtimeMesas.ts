@@ -34,7 +34,7 @@ export function useRealtimeMesas() {
         .from('mesas')
         .select(`
           *,
-          comandas(id, total_calculado, aberta_em, status)
+          comandas(id, total_calculado, aberta_em, status, clientes(nome))
         `)
         .order('numero', { ascending: true });
 
@@ -45,7 +45,8 @@ export function useRealtimeMesas() {
         return {
           ...m,
           total_parcial: comandaAtiva?.total_calculado || 0,
-          aberta_em: comandaAtiva?.aberta_em
+          aberta_em: comandaAtiva?.aberta_em,
+          cliente_nome: comandaAtiva?.clientes?.nome
         };
       });
 
