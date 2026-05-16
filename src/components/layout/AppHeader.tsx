@@ -51,10 +51,16 @@ export function AppHeader({
             {title}
           </h2>
 
-          <div className="w-10 flex justify-end">
+          <div className="w-14 flex justify-end items-center gap-2">
+            {showUser && user && (
+              <div className="flex flex-col items-end">
+                <span className="text-[8px] font-black text-stone-900 uppercase leading-none">{user.nome.split(' ')[0]}</span>
+                <span className="text-[7px] font-bold text-stone-400 uppercase tracking-tighter mt-0.5">{user.nivel_acesso}</span>
+              </div>
+            )}
             {showUser && (
-              <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-stone-600 font-bold text-xs border border-stone-200">
-                {user?.nome?.[0] || 'M'}
+              <div className="w-8 h-8 rounded-full bg-stone-900 text-white flex items-center justify-center text-[11px] font-black border border-stone-800 shadow-sm shrink-0">
+                {user?.nome?.[0] || '?'}
               </div>
             )}
           </div>

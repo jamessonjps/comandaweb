@@ -76,7 +76,7 @@ export default function ComandaDetalhesPage() {
         .from('comandas')
         .insert({
           mesa_id: mesaId,
-          criado_por: user.id,
+          garcom_id: user.id,
           status_pagamento: 'Pendente'
         });
 
