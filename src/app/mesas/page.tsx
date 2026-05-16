@@ -58,9 +58,9 @@ export default function MesasPage() {
                 <span className="text-[8px] font-bold uppercase tracking-widest text-stone-400 text-center px-1 line-clamp-1">
                   {mesa.cliente_nome || mesa.status}
                 </span>
-                {mesa.total_parcial > 0 && (
+                {(mesa.total_parcial || 0) > 0 && (
                   <span className="text-[10px] font-black text-stone-900 mt-0.5">
-                    {formatCurrency(mesa.total_parcial)}
+                    {formatCurrency(mesa.total_parcial || 0)}
                   </span>
                 )}
               </div>
