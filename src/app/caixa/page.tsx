@@ -72,47 +72,47 @@ export default function CaixaDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-amber-50 pb-32 font-serif">
+    <div className="min-h-screen bg-stone-50 pb-32 font-sans">
       <AppHeader title="Caixa" showBack={true} />
 
       <main className="px-6 py-6 flex flex-col gap-6">
-        {/* Resumo Rápido Estilo Gravura */}
-        <div className="grid grid-cols-2 gap-6">
-          <div className="woodcut-card bg-amber-100 flex flex-col gap-1 p-4">
-            <span className="text-[10px] text-amber-900 uppercase font-black tracking-widest">Abertas</span>
-            <span className="text-2xl font-display font-black text-amber-950">{comandas.length}</span>
+        {/* Resumo Rápido Moderno */}
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bistro-card flex flex-col gap-1 p-4 shadow-sm">
+            <span className="text-[10px] text-stone-400 uppercase font-bold tracking-widest">Abertas</span>
+            <span className="text-2xl font-black text-stone-900">{comandas.length}</span>
           </div>
-          <div className="woodcut-card bg-amber-100 flex flex-col gap-1 p-4">
-            <span className="text-[10px] text-amber-900 uppercase font-black tracking-widest">Pendente</span>
-            <span className="text-xl font-display font-black text-amber-950 leading-tight">
+          <div className="bistro-card flex flex-col gap-1 p-4 shadow-sm border-stone-100 bg-white">
+            <span className="text-[10px] text-stone-400 uppercase font-bold tracking-widest">Pendente</span>
+            <span className="text-xl font-black text-stone-900 leading-tight">
               {formatCurrency(comandas.reduce((acc, c) => acc + c.total, 0))}
             </span>
           </div>
         </div>
 
-        <h2 className="text-sm font-display font-black text-amber-950 uppercase tracking-[0.2em] px-1 border-b-2 border-amber-950 pb-2">
+        <h2 className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.3em] px-1">
           Comandas Ativas
         </h2>
 
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
           {isLoading ? (
             <div className="py-20 flex justify-center">
-              <div className="w-10 h-10 border-4 border-amber-950 border-t-transparent rounded-full animate-spin" />
+              <div className="w-10 h-10 border-4 border-stone-900 border-t-transparent rounded-full animate-spin" />
             </div>
           ) : comandas.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-amber-900/30">
+            <div className="flex flex-col items-center justify-center py-20 text-stone-200">
               <CheckCircle size={64} className="mb-4" />
-              <span className="font-display font-black uppercase tracking-widest">Tudo em dia!</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest">Tudo em dia!</span>
             </div>
           ) : (
             comandas.map((comanda) => (
-              <div key={comanda.id} className="woodcut-card bg-white flex flex-col gap-4">
+              <div key={comanda.id} className="bistro-card flex flex-col gap-5">
                 <div className="flex justify-between items-start">
                   <div className="flex flex-col">
-                    <span className="text-3xl font-display font-black text-amber-950">MESA {comanda.mesa.numero}</span>
-                    <div className="flex items-center gap-2 text-[10px] text-amber-900 font-bold uppercase tracking-wider mt-1">
+                    <span className="text-2xl font-extrabold text-stone-900 tracking-tighter">MESA {comanda.mesa.numero.toString().padStart(2, '0')}</span>
+                    <div className="flex items-center gap-2 text-[10px] text-stone-400 font-bold uppercase tracking-wider mt-1">
                       <Clock size={12} />
-                      <span>Desde {new Date(comanda.aberta_em).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span>{new Date(comanda.aberta_em).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                   </div>
                   <Badge variant={comanda.status === 'fechando' ? 'warning' : 'info'}>
@@ -120,14 +120,15 @@ export default function CaixaDashboardPage() {
                   </Badge>
                 </div>
 
-                <div className="flex justify-between items-end pt-4 border-t-2 border-amber-950 border-dashed">
+                <div className="flex justify-between items-end pt-5 border-t border-stone-100">
                   <div className="flex flex-col">
-                    <span className="text-[10px] text-amber-900 uppercase font-black tracking-widest">Total</span>
-                    <span className="text-2xl font-display font-black text-amber-950">{formatCurrency(comanda.total)}</span>
+                    <span className="text-[10px] text-stone-400 uppercase font-bold tracking-widest">A Pagar</span>
+                    <span className="text-2xl font-black text-stone-900">{formatCurrency(comanda.total)}</span>
                   </div>
                   <Button 
                     onClick={() => handleFecharPagamento(comanda.id, comanda.mesa_id)}
                     variant={comanda.status === 'fechando' ? 'primary' : 'secondary'}
+                    className="h-12 px-4"
                   >
                     <Receipt size={18} />
                     RECEBER

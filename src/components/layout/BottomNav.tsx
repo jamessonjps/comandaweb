@@ -21,7 +21,7 @@ export const BottomNav = () => {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-amber-50 border-t-2 border-amber-950 px-6 py-3 flex justify-around items-center safe-area-bottom">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-stone-200 px-6 py-3 flex justify-around items-center safe-area-bottom shadow-[0_-4px_10px_rgba(0,0,0,0.03)]">
       {tabs.map((tab) => {
         const isActive = pathname.startsWith(tab.path);
         const Icon = tab.icon;
@@ -30,13 +30,13 @@ export const BottomNav = () => {
           <button
             key={tab.id}
             onClick={() => router.push(tab.path)}
-            className={`flex flex-col items-center gap-1 transition-all active:scale-95
-              ${isActive ? 'text-amber-950 scale-110' : 'text-amber-900/40'}`}
+            className={`flex flex-col items-center gap-1 transition-all
+              ${isActive ? 'text-stone-900 scale-105' : 'text-stone-400'}`}
           >
-            <div className={`p-1 ${isActive ? 'bg-amber-100 woodcut-border border-amber-950' : ''}`}>
-              <Icon size={isActive ? 24 : 20} strokeWidth={isActive ? 2.5 : 2} />
+            <div className={`p-2 rounded-full transition-colors ${isActive ? 'bg-stone-100' : ''}`}>
+              <Icon size={isActive ? 22 : 20} strokeWidth={isActive ? 2.5 : 2} />
             </div>
-            <span className={`text-[9px] font-display font-black uppercase tracking-widest ${isActive ? 'opacity-100' : 'opacity-60'}`}>
+            <span className={`text-[9px] font-bold uppercase tracking-widest ${isActive ? 'opacity-100' : 'opacity-60'}`}>
               {tab.label}
             </span>
           </button>

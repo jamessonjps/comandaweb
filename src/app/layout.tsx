@@ -37,8 +37,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR">
-      <body className="font-sans antialiased bg-[#0A0A0B] text-[#F4F4F5]">
+    <html lang="pt-BR" className={`${inter.variable} ${outfit.variable}`}>
+      <body className="antialiased">
         {children}
       </body>
     </html>

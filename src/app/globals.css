@@ -1,98 +1,99 @@
 @import "tailwindcss";
 
 :root {
-  /* Backgrounds */
-  --bg-base:     #0A0A0B;
-  --bg-surface:  #161618;
-  --bg-elevated: #1E1E21;
-  --bg-overlay:  rgba(255,255,255,0.04);
-
-  /* Brand */
-  --accent:      #EAB308;
-  --accent-dim:  #92710A;
-  --success:     #22C55E;
-  /* Paleta Bistrô Vintage - Mangueirão */
-  --background: #FFFBEB; /* bg-amber-50 */
-  --surface: #FEF3C7;    /* bg-amber-100 */
-  --foreground: #451A03; /* text-amber-950 (Chocolate Profundo) */
+  /* Paleta Bistrô Moderno - Mangueirão */
+  --background: #F8F7F4; 
+  --surface: #FFFFFF;    
+  --foreground: #1C1917; 
   
-  --primary: #451A03;
-  --primary-foreground: #FFFBEB;
+  --primary: #451A03;    
+  --primary-foreground: #FFFFFF;
   
-  --accent: #D97706;     /* Amarelo Mostarda */
-  --accent-foreground: #451A03;
+  --accent: #B45309;     
+  --accent-foreground: #FFFFFF;
 
-  --success: #65A30D;    /* Verde Pálido/Oliva */
-  --danger: #991B1B;     /* Vermelho Ferrugem */
-  --warning: #D97706;
+  --success: #15803D;    
+  --danger: #B91C1C;     
+  --warning: #A16207;
 
-  --border: #451A03;
+  --border: #E7E5E4;     
   --ring: #451A03;
 
-  --radius: 0px; /* Estilo artesanal prefere cantos retos ou muito orgânicos */
+  --radius: 12px;
 }
 
 @layer base {
   body {
-    @apply bg-amber-50 text-amber-950;
-    font-family: var(--font-display);
-    font-feature-settings: "kern" 1;
-    background-image: url("https://www.transparenttextures.com/patterns/paper.png"); /* Textura sutil de papel antigo */
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-body), ui-sans-serif, system-ui;
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-bold uppercase tracking-tight;
-    font-family: var(--font-display);
+    font-family: var(--font-display), ui-serif, Georgia;
+    font-weight: 800;
+    color: var(--primary);
+    letter-spacing: -0.02em;
   }
 }
 
 @layer components {
-  /* Efeito de Gravura / Woodcut */
-  .woodcut-border {
-    border: 2px solid var(--border);
-    box-shadow: 3px 3px 0px 0px var(--border);
-    position: relative;
+  /* Cartão Limpo e Elegante */
+  .bistro-card {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  .woodcut-button {
-    @apply px-6 py-3 font-bold uppercase tracking-widest transition-all active:translate-y-1 active:shadow-none;
-    font-family: var(--font-display);
-    border: 2px solid var(--border);
+  .bistro-card-hover {
+    cursor: pointer;
+  }
+  
+  .bistro-card-hover:hover {
+    border-color: #D6D3D1;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+  
+  .bistro-card-hover:active {
+    transform: scale(0.98);
+  }
+
+  /* Botão Premium e Legível */
+  .bistro-button-primary {
+    @apply flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold uppercase tracking-widest transition-all active:scale-[0.97] disabled:opacity-50;
     background-color: var(--primary);
-    color: var(--primary-foreground);
-    box-shadow: 4px 4px 0px 0px #78350F;
+    color: white;
   }
 
-  .woodcut-card {
-    @apply p-6 bg-amber-100 border-2 border-amber-950;
-    box-shadow: 6px 6px 0px 0px rgba(69, 26, 3, 0.1);
-    background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(69, 26, 3, 0.03) 10px, rgba(69, 26, 3, 0.03) 11px);
-  }
-
-  /* Hachuras (Cross-hatching) */
-  .hatch-pattern {
-    background-image: radial-gradient(var(--border) 0.5px, transparent 0.5px);
-    background-size: 4px 4px;
+  .bistro-button-secondary {
+    @apply flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold uppercase tracking-widest transition-all active:scale-[0.97] border-2 border-stone-200 bg-white text-stone-900;
   }
 }
 
+/* Utilitários de Tipografia */
 .font-display {
-  font-family: 'Vidaloka', serif;
+  font-family: var(--font-display);
 }
 
-.font-serif {
-  font-family: 'Averia Serif Libre', serif;
+.font-body {
+  font-family: var(--font-body);
 }
 
-/* Custom Scrollbar Vintage */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-amber-100;
+  background: var(--background);
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-amber-950 rounded-none;
+  background: #D6D3D1;
+  border-radius: 10px;
 }

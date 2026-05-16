@@ -49,42 +49,39 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-amber-50 flex flex-col items-center justify-center px-6 select-none font-serif">
-      <div className="w-full max-w-sm flex flex-col items-center gap-10">
+    <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center px-6 select-none">
+      <div className="w-full max-w-sm flex flex-col items-center gap-12">
         
-        {/* Logo Branding */}
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-20 h-20 border-4 border-amber-950 rounded-full flex items-center justify-center bg-amber-100 shadow-[6px_6px_0px_0px_#451A03]">
-             <UtensilsIcon size={40} className="text-amber-950" />
-          </div>
+        {/* Logo Branding - Cleaner */}
+        <div className="flex flex-col items-center gap-4">
           <div className="text-center">
-            <h1 className="text-4xl font-display font-black text-amber-950 tracking-tighter leading-none">MANGUEIRÃO</h1>
-            <p className="text-[10px] font-display font-bold tracking-[0.3em] text-amber-900 mt-1 uppercase">Bar & Petiscaria</p>
+            <h1 className="text-4xl font-display font-extrabold text-stone-900 tracking-tighter leading-none">MANGUEIRÃO</h1>
+            <p className="text-[10px] font-bold tracking-[0.4em] text-stone-400 mt-2 uppercase">Bar & Petiscaria</p>
           </div>
         </div>
 
-        {/* PIN Display */}
-        <div className="flex flex-col items-center gap-6 w-full">
-          <div className="flex gap-4 h-12 items-center">
+        {/* PIN Display - Cleaner */}
+        <div className="flex flex-col items-center gap-8 w-full">
+          <div className="flex gap-4 h-4 items-center">
             {[...Array(6)].map((_, i) => (
               <div 
                 key={i}
-                className={`w-4 h-4 rounded-full border-2 border-amber-950 transition-all 
-                  ${i < pin.length ? 'bg-amber-950' : 'bg-transparent'}`}
+                className={`w-3 h-3 rounded-full border-2 border-stone-200 transition-all duration-300
+                  ${i < pin.length ? 'bg-stone-900 border-stone-900 scale-125' : 'bg-transparent'}`}
               />
             ))}
           </div>
-          {error && <span className="text-red-900 text-xs font-black uppercase tracking-widest">{error}</span>}
+          {error && <span className="text-red-600 text-[10px] font-black uppercase tracking-widest bg-red-50 px-3 py-1 rounded-full">{error}</span>}
         </div>
 
-        {/* Keypad */}
-        <div className="grid grid-cols-3 gap-6 w-full">
+        {/* Keypad - High Contrast */}
+        <div className="grid grid-cols-3 gap-4 w-full">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
             <button
               key={num}
               type="button"
               onClick={() => handleKeyPress(num.toString())}
-              className="h-20 bg-amber-100 border-2 border-amber-950 text-3xl font-display font-black text-amber-950 active:bg-amber-950 active:text-amber-50 transition-all shadow-[4px_4px_0px_0px_#451A03] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none touch-manipulation"
+              className="h-20 bg-white border border-stone-200 rounded-2xl text-2xl font-bold text-stone-900 active:bg-stone-900 active:text-white transition-all shadow-sm active:scale-95 touch-manipulation"
             >
               {num}
             </button>
@@ -92,14 +89,14 @@ export default function LoginPage() {
           <button 
             type="button"
             onClick={handleDelete}
-            className="h-20 flex items-center justify-center text-amber-950 active:text-red-900"
+            className="h-20 flex items-center justify-center text-stone-400 active:text-stone-900 transition-colors"
           >
-            <Delete size={32} />
+            <Delete size={28} />
           </button>
           <button
             type="button"
             onClick={() => handleKeyPress('0')}
-            className="h-20 bg-amber-100 border-2 border-amber-950 text-3xl font-display font-black text-amber-950 active:bg-amber-950 active:text-amber-50 transition-all shadow-[4px_4px_0px_0px_#451A03] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none touch-manipulation"
+            className="h-20 bg-white border border-stone-200 rounded-2xl text-2xl font-bold text-stone-900 active:bg-stone-900 active:text-white transition-all shadow-sm active:scale-95 touch-manipulation"
           >
             0
           </button>
@@ -107,13 +104,13 @@ export default function LoginPage() {
             type="button"
             onClick={handleSubmit}
             disabled={isLoading || pin.length < 4}
-            className="h-20 bg-amber-950 text-amber-50 flex items-center justify-center shadow-[4px_4px_0px_0px_#78350F] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:opacity-30 transition-all"
+            className="h-20 bg-stone-900 text-white rounded-2xl flex items-center justify-center active:scale-95 disabled:opacity-20 transition-all shadow-md"
           >
-            {isLoading ? <Loader2 className="animate-spin" size={32} /> : <Lock size={32} />}
+            {isLoading ? <Loader2 className="animate-spin" size={28} /> : <Lock size={28} />}
           </button>
         </div>
         
-        <p className="text-[10px] text-amber-900/50 uppercase font-bold tracking-widest">Acesso Restrito a Colaboradores</p>
+        <p className="text-[9px] text-stone-400 uppercase font-bold tracking-[0.2em]">Acesso Restrito</p>
       </div>
     </div>
   );

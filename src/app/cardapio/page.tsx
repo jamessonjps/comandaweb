@@ -31,28 +31,28 @@ function CardapioContent() {
   }, [produtos, search, activeTab]);
 
   return (
-    <div className="min-h-screen bg-amber-50 pb-32 font-serif">
+    <div className="min-h-screen bg-stone-50 pb-32 font-sans">
       <AppHeader title="Cardápio" showUser={false} showBack={true} />
 
       <main className="flex flex-col gap-4">
-        {/* Busca e Categorias Vintage */}
-        <div className="sticky top-[100px] z-20 bg-amber-50/95 backdrop-blur-sm px-6 py-4 flex flex-col gap-4 border-b-2 border-amber-950">
+        {/* Busca e Categorias Modernas */}
+        <div className="sticky top-[108px] z-20 bg-white/90 backdrop-blur-md px-6 py-4 flex flex-col gap-4 border-b border-stone-200">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-amber-900/50" size={18} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" size={18} />
             <input 
               type="text" 
-              placeholder="Pesquisar no cardápio..." 
+              placeholder="O que você deseja hoje?" 
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-amber-100 border-2 border-amber-950 rounded-none py-3 pl-12 pr-4 text-sm text-amber-950 focus:outline-none focus:bg-amber-200 transition-colors placeholder:text-amber-900/30 font-bold"
+              className="w-full bg-stone-100 border border-stone-200 rounded-xl py-3 pl-12 pr-4 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-200 transition-all placeholder:text-stone-400 font-medium"
             />
           </div>
 
           <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
             <button
               onClick={() => setActiveTab('all')}
-              className={`px-6 py-2 border-2 font-display font-black text-[10px] uppercase tracking-widest transition-all
-                ${activeTab === 'all' ? 'bg-amber-950 text-amber-50 border-amber-950' : 'bg-transparent text-amber-900 border-amber-900/20'}`}
+              className={`px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all
+                ${activeTab === 'all' ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-500'}`}
             >
               TODOS
             </button>
@@ -60,8 +60,8 @@ function CardapioContent() {
               <button
                 key={cat}
                 onClick={() => setActiveTab(cat)}
-                className={`px-6 py-2 border-2 font-display font-black text-[10px] uppercase tracking-widest transition-all
-                  ${activeTab === cat ? 'bg-amber-950 text-amber-50 border-amber-950' : 'bg-transparent text-amber-900 border-amber-900/20'}`}
+                className={`px-6 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all
+                  ${activeTab === cat ? 'bg-stone-900 text-white' : 'bg-stone-100 text-stone-500'}`}
               >
                 {cat}
               </button>
@@ -69,33 +69,33 @@ function CardapioContent() {
           </div>
         </div>
 
-        {/* Lista de Produtos Estilo Gravura */}
-        <div className="px-6 flex flex-col gap-6 py-4">
+        {/* Lista de Produtos Limpa */}
+        <div className="px-6 flex flex-col gap-4 py-4">
           {isLoading ? (
-            [...Array(6)].map((_, i) => <div key={i} className="h-24 bg-amber-100 animate-pulse border-2 border-amber-950/10" />)
+            [...Array(6)].map((_, i) => <div key={i} className="h-24 bg-white animate-pulse rounded-xl border border-stone-100" />)
           ) : filteredProdutos.length > 0 ? (
             filteredProdutos.map(produto => {
               const itemNoCarrinho = itensCarrinho.find(i => i.produto_id === produto.id);
               
               return (
-                <div key={produto.id} className="woodcut-card bg-white p-4 flex items-center justify-between gap-4">
+                <div key={produto.id} className="bistro-card flex items-center justify-between gap-4">
                   <div className="flex flex-col gap-1 flex-1">
-                    <span className="text-lg font-display font-black text-amber-950 uppercase leading-tight">{produto.nome}</span>
-                    <span className="text-sm font-display font-black text-amber-700 mt-1">{formatCurrency(produto.preco)}</span>
+                    <span className="text-sm font-bold text-stone-900 uppercase tracking-tight">{produto.nome}</span>
+                    <span className="text-sm font-black text-stone-900 mt-1">{formatCurrency(produto.preco)}</span>
                   </div>
 
                   {itemNoCarrinho ? (
-                    <div className="flex items-center gap-3 bg-amber-50 border-2 border-amber-950 p-1">
+                    <div className="flex items-center gap-4 bg-stone-50 rounded-xl px-2 py-1 border border-stone-100">
                       <button 
                         onClick={() => atualizarQuantidade(produto.id, -1)}
-                        className="w-8 h-8 flex items-center justify-center text-amber-950 active:bg-amber-200"
+                        className="w-8 h-8 flex items-center justify-center text-stone-900 active:scale-90 transition-transform"
                       >
                         <Minus size={16} strokeWidth={3} />
                       </button>
-                      <span className="text-sm font-display font-black w-4 text-center">{itemNoCarrinho.quantidade}</span>
+                      <span className="text-sm font-black w-4 text-center text-stone-900">{itemNoCarrinho.quantidade}</span>
                       <button 
                         onClick={() => atualizarQuantidade(produto.id, 1)}
-                        className="w-8 h-8 flex items-center justify-center text-amber-950 active:bg-amber-200"
+                        className="w-8 h-8 flex items-center justify-center text-stone-900 active:scale-90 transition-transform"
                       >
                         <Plus size={16} strokeWidth={3} />
                       </button>
@@ -108,7 +108,7 @@ function CardapioContent() {
                         preco_unitario: produto.preco,
                         quantidade: 1
                       })}
-                      className="p-3 bg-amber-950 text-amber-50 shadow-[4px_4px_0px_0px_#78350F] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                      className="w-12 h-12 bg-stone-900 text-white rounded-xl flex items-center justify-center shadow-md active:scale-95 transition-all"
                     >
                       <Plus size={20} strokeWidth={3} />
                     </button>
@@ -117,25 +117,25 @@ function CardapioContent() {
               );
             })
           ) : (
-            <div className="py-20 text-center font-display font-black text-amber-900/30 uppercase tracking-widest">
+            <div className="py-20 text-center text-[10px] font-bold text-stone-300 uppercase tracking-[0.3em]">
               Nenhum item encontrado
             </div>
           )}
         </div>
       </main>
 
-      {/* Footer Carrinho Vintage */}
+      {/* Footer Carrinho Moderno */}
       {itensCarrinho.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-amber-50 to-transparent z-40">
+        <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-stone-50 to-transparent z-40">
           <button 
             onClick={() => mesaId ? router.push(`/mesas/${mesaId}`) : router.push('/mesas')} 
-            className="w-full bg-amber-950 text-amber-50 p-5 shadow-[6px_6px_0px_0px_#78350F] flex justify-between items-center font-display font-black uppercase tracking-widest active:translate-x-1 active:translate-y-1 active:shadow-none transition-all"
+            className="w-full bg-stone-900 text-white p-5 rounded-2xl shadow-xl flex justify-between items-center font-bold uppercase tracking-widest active:scale-[0.98] transition-all"
           >
             <div className="flex items-center gap-3">
               <ShoppingCart size={20} />
-              <span>Ver Pedido</span>
+              <span className="text-xs">Ver Pedido</span>
             </div>
-            <span>{formatCurrency(total)}</span>
+            <span className="font-black">{formatCurrency(total)}</span>
           </button>
         </div>
       )}
