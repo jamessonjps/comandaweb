@@ -138,12 +138,12 @@ function CardapioContent() {
       {itensCarrinho.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-stone-50 to-transparent z-40">
           <button 
-            onClick={() => mesaId ? router.push(`/mesas/${mesaId}`) : router.push('/mesas')} 
+            onClick={() => mesaId ? router.push(`/mesas/${mesaId}`) : router.push('/mesas?assign=true')} 
             className="w-full bg-stone-900 text-white p-5 rounded-2xl shadow-xl flex justify-between items-center font-bold uppercase tracking-widest active:scale-[0.98] transition-all"
           >
             <div className="flex items-center gap-3">
               <ShoppingCart size={20} />
-              <span className="text-xs">Ver Pedido</span>
+              <span className="text-xs">{mesaId ? 'Ver Pedido' : 'Vincular a uma Mesa'}</span>
             </div>
             <span className="font-black">{formatCurrency(total)}</span>
           </button>
