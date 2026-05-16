@@ -56,6 +56,7 @@ export function useComanda(mesaId: string) {
           .from('itens_pedido')
           .select('*, produto:produtos(nome)')
           .eq('comanda_id', comandaData.id)
+          .neq('status_item', 'cancelado')
           .order('criado_em', { ascending: false });
 
         if (itensError) throw itensError;

@@ -21,7 +21,7 @@ export default function AdminDashboardPage() {
   const user = useAuthStore((state) => state.user);
 
   // Proteção de rota
-  if (!user || user.nivel_acesso !== 'admin') {
+  if (!user || (user.nivel_acesso !== 'admin' && user.nivel_acesso !== 'GERENTE')) {
     return (
       <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center p-6 text-center">
         <h1 className="text-xl font-black text-stone-900 mb-2 uppercase">Acesso Restrito</h1>

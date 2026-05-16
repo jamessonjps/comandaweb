@@ -17,7 +17,9 @@ import {
   FileText,
   RotateCcw,
   Trash2,
-  Lock
+  Lock,
+  ListFilter,
+  MessageCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -30,9 +32,9 @@ export default function CaixaDashboardPage() {
   const [selectedComanda, setSelectedComanda] = useState<any>(null);
   const [itensDaComanda, setItensDaComanda] = useState<any[]>([]);
   const [comandaDetalhes, setComandaDetalhes] = useState<any>(null);
+  const [showReview, setShowReview] = useState(false);
   const user = useAuthStore(state => state.user);
   
-  // Estados para Autorização por PIN
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
@@ -68,17 +70,18 @@ export default function CaixaDashboardPage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'comandas' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'itens_pedido' }, () => {
          fetchData();
-         if (selectedComanda) handleSelecionarComanda(selectedComanda);
+         if (selectedComanda) handleSelecionarComanda(selectedComanda, showReview);
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [selectedComanda]);
 
-  const handleSelecionarComanda = async (comanda: any) => {
+  const handleSelecionarComanda = async (comanda: any, reviewOnly = false) => {
     setSelectedComanda(comanda);
     setPagamentos([]);
     const { data } = await supabase.from('itens_pedido').select('*, produto:produtos(nome)').eq('comanda_id', comanda.id).neq('status_item', 'cancelado');
     setItensDaComanda(data || []);
+    setShowReview(reviewOnly);
   };
 
   const handleAuthAction = (action: () => void) => {
@@ -88,12 +91,12 @@ export default function CaixaDashboardPage() {
   };
 
   const verifyPin = () => {
-    if (pinInput === '5678') { // PIN do Gerente
+    if (pinInput === '5678') { 
       if (pendingAction) pendingAction();
       setShowPinModal(false);
       setPendingAction(null);
     } else {
-      alert('PIN DE GERENTE INVÁLIDO!');
+      alert('PIN INVÁLIDO!');
       setPinInput('');
     }
   };
@@ -101,12 +104,7 @@ export default function CaixaDashboardPage() {
   const handleCancelarItem = async (itemId: string) => {
     handleAuthAction(async () => {
       await supabase.from('itens_pedido').update({ status_item: 'cancelado' }).eq('id', itemId);
-      if (selectedComanda) {
-        const { data: updated } = await supabase.from('comandas').select('*').eq('id', selectedComanda.id).single();
-        setSelectedComanda({ ...selectedComanda, total_calculado: updated.total_calculado });
-        const { data: freshItens } = await supabase.from('itens_pedido').select('*, produto:produtos(nome)').eq('comanda_id', selectedComanda.id).neq('status_item', 'cancelado');
-        setItensDaComanda(freshItens || []);
-      }
+      if (selectedComanda) handleSelecionarComanda(selectedComanda, showReview);
     });
   };
 
@@ -147,17 +145,36 @@ export default function CaixaDashboardPage() {
 
   const shareWhatsApp = async (comanda: any) => {
     const { data: itns } = await supabase.from('itens_pedido').select('*, produto:produtos(nome)').eq('comanda_id', comanda.id).neq('status_item', 'cancelado');
-    let texto = `*--- CONTA PARCIAL ---*\n*Mesa ${comanda.mesa?.numero || comanda.mesa_id}*\n\n`;
-    itns?.forEach((i: any) => {
-      texto += `${i.quantidade}x ${i.produto.nome}: ${formatCurrency(i.preco_unitario_congelado * i.quantidade)}\n`;
-    });
     const subtotal = comanda.total_calculado;
     const taxa = useTaxa ? subtotal * 0.1 : 0;
-    texto += `\nSubtotal: ${formatCurrency(subtotal)}`;
-    if (taxa > 0) texto += `\nTaxa 10%: ${formatCurrency(taxa)}`;
-    texto += `\n*TOTAL: ${formatCurrency(subtotal + taxa)}*\n\nObrigado!`;
+    const total = subtotal + taxa;
+
+    let texto = `*🌊 MANGUEIRÃO BISTRO 🌊*\n`;
+    texto += `*------------------------------*\n`;
+    texto += `📝 *CONTA PARCIAL - MESA ${comanda.mesa?.numero || comanda.mesa_id}*\n`;
+    texto += `👤 Cliente: ${comanda.clientes?.nome || 'Mesa Local'}\n`;
+    texto += `*------------------------------*\n\n`;
+    
+    itns?.forEach((i: any) => {
+      texto += `• ${i.quantidade}x ${i.produto.nome.padEnd(15)} ${formatCurrency(i.preco_unitario_congelado * i.quantidade)}\n`;
+    });
+    
+    texto += `\n*------------------------------*\n`;
+    texto += `Subtotal: ${formatCurrency(subtotal)}\n`;
+    if (useTaxa) {
+      texto += `Taxa de Serviço (10%): ${formatCurrency(taxa)}\n`;
+      texto += `_(Opcional)_\n`;
+    }
+    texto += `*TOTAL: ${formatCurrency(total)}*\n`;
+    texto += `*------------------------------*\n\n`;
+    texto += `*Obrigado pela preferência!* 😊`;
+
     const phone = comanda.clientes?.whatsapp || comanda.clientes?.telefone || '';
-    window.open(`https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(texto)}`, '_blank');
+    if (!phone) {
+      alert('ESTA MESA NÃO TEM WHATSAPP CADASTRADO!');
+      return;
+    }
+    window.open(`https://wa.me/55${phone.replace(/\D/g, '')}?text=${encodeURIComponent(texto)}`, '_blank');
   };
 
   return (
@@ -165,69 +182,77 @@ export default function CaixaDashboardPage() {
       <AppHeader title="Gestão do Caixa" />
 
       <main className="px-6 py-6 flex flex-col gap-8">
+        
         {selectedComanda && (
           <div className="fixed inset-0 bg-stone-900/95 z-50 p-6 flex flex-col gap-4 overflow-y-auto">
-             <div className="flex justify-between items-center text-white"><h2 className="text-xl font-black uppercase">Mesa {selectedComanda.mesa.numero}</h2><button onClick={() => setSelectedComanda(null)}><XCircle size={32} className="opacity-40" /></button></div>
-             <div className="bg-white rounded-3xl p-6 flex flex-col gap-4">
+             <div className="flex justify-between items-center text-white"><h2 className="text-xl font-black uppercase">{showReview ? 'Resumo da Mesa' : 'Fechar Mesa'} {selectedComanda.mesa.numero}</h2><button onClick={() => { setSelectedComanda(null); setShowReview(false); }}><XCircle size={32} className="opacity-40" /></button></div>
+             <div className="bg-white rounded-3xl p-6 flex flex-col gap-4 shadow-2xl">
                
-               <div className="flex flex-col gap-2 max-h-40 overflow-y-auto bg-stone-50 p-3 rounded-2xl border border-stone-100">
-                  <span className="text-[8px] font-black uppercase text-stone-400 tracking-widest mb-1">Itens da Conta</span>
-                  {itensDaComanda.map(item => (
-                    <div key={item.id} className="flex justify-between items-center text-[10px] font-bold uppercase">
+               <div className="flex flex-col gap-2 max-h-60 overflow-y-auto bg-stone-50 p-4 rounded-2xl border border-stone-100">
+                  <div className="flex items-center gap-2 mb-2"><ListFilter size={14} className="text-stone-400" /><span className="text-[8px] font-black uppercase text-stone-400 tracking-widest">Itens Detalhados</span></div>
+                  {itensDaComanda.length === 0 ? <span className="text-center py-6 text-[10px] font-bold text-stone-300 uppercase">Nenhum item</span> : itensDaComanda.map(item => (
+                    <div key={item.id} className="flex justify-between items-center py-2 border-b border-stone-100 last:border-0 text-[10px] font-bold uppercase">
                        <span className="text-stone-600">{item.quantidade}x {item.produto.nome}</span>
                        <div className="flex items-center gap-3">
-                          <span className="text-stone-900">{formatCurrency(item.preco_unitario_congelado * item.quantidade)}</span>
-                          <button onClick={() => handleCancelarItem(item.id)} className="text-red-500"><Trash2 size={12} /></button>
+                          <span className="text-stone-900 font-black">{formatCurrency(item.preco_unitario_congelado * item.quantidade)}</span>
+                          <button onClick={() => handleCancelarItem(item.id)} className="text-red-500 p-1"><Trash2 size={12} /></button>
                        </div>
                     </div>
                   ))}
                </div>
 
-               <div className="flex justify-between border-b pb-4"><span className="text-stone-400 text-[10px] font-bold uppercase tracking-widest">Total Consumo</span><span className="text-xl font-black">{formatCurrency(selectedComanda.total_calculado)}</span></div>
-               <div className="flex justify-between items-center py-2">
-                 <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={useTaxa} onChange={(e) => setUseTaxa(e.target.checked)} className="accent-stone-900" /><span className="text-[10px] font-bold uppercase">Taxa 10%</span></label>
-                 <span className="text-3xl font-black text-stone-900">{formatCurrency(totalComTaxa)}</span>
-               </div>
-               <div className="flex gap-2">
-                 <select value={metodoAtual} onChange={(e) => setMetodoAtual(e.target.value)} className="flex-1 bg-stone-50 border rounded-xl p-3 text-xs font-bold uppercase"><option value="dinheiro">Dinheiro</option><option value="pix">PIX</option><option value="cartao_debito">C. Débito</option><option value="cartao_credito">C. Crédito</option><option value="fiado">Fiado</option></select>
-                 <input type="number" placeholder="Valor" value={valorAtual} onChange={(e) => setValorAtual(e.target.value)} className="w-24 bg-stone-50 border rounded-xl p-3 text-xs font-bold" />
-                 <button onClick={handleAddPagamento} className="w-12 h-12 bg-stone-900 text-white rounded-xl flex items-center justify-center"><Plus /></button>
-               </div>
-               <div className="flex flex-col gap-1">
-                 {pagamentos.map((p, i) => (<div key={i} className="flex justify-between items-center bg-stone-50 p-2 rounded-lg text-[10px] font-bold uppercase"><span>{p.metodo}</span><div className="flex items-center gap-2"><span>{formatCurrency(p.valor)}</span><button onClick={() => setPagamentos(pagamentos.filter((_, idx) => idx !== i))} className="text-red-500"><MinusCircle size={14} /></button></div></div>))}
-               </div>
-               <div className="bg-stone-900 text-white p-5 rounded-2xl flex justify-between items-center shadow-xl">
-                 <div className="flex flex-col"><span className="text-[8px] uppercase font-bold opacity-60">Troco</span><span className="text-xl font-black">{troco > 0 ? formatCurrency(troco) : formatCurrency(faltaPagar)}</span></div>
-                 <Button onClick={handleFinalizar} disabled={jaPago < totalComTaxa - 0.01} className="!bg-white !text-stone-900">FINALIZAR</Button>
-               </div>
-               <button onClick={() => shareWhatsApp(selectedComanda)} className="w-full py-4 text-[10px] font-black uppercase text-green-600 bg-green-50 rounded-xl flex items-center justify-center gap-2"><Smartphone size={16} /> ENVIAR CONTA PARCIAL</button>
+               <div className="flex justify-between items-center pt-2"><span className="text-stone-400 text-[10px] font-bold uppercase tracking-widest">Subtotal</span><span className="text-2xl font-black text-stone-900">{formatCurrency(selectedComanda.total_calculado)}</span></div>
+
+               {!showReview ? (
+                 <>
+                   <div className="flex justify-between items-center py-2 border-t mt-2">
+                     <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={useTaxa} onChange={(e) => setUseTaxa(e.target.checked)} className="accent-stone-900" /><span className="text-[10px] font-bold uppercase">Taxa 10% (Opcional)</span></label>
+                     <span className="text-3xl font-black text-stone-900">{formatCurrency(totalComTaxa)}</span>
+                   </div>
+                   {/* ... (restante do fluxo de pagamento mantido) */}
+                   <div className="flex gap-2">
+                     <select value={metodoAtual} onChange={(e) => setMetodoAtual(e.target.value)} className="flex-1 bg-stone-50 border rounded-xl p-3 text-xs font-bold uppercase"><option value="dinheiro">Dinheiro</option><option value="pix">PIX</option><option value="cartao_debito">C. Débito</option><option value="cartao_credito">C. Crédito</option><option value="fiado">Fiado</option></select>
+                     <input type="number" placeholder="Valor" value={valorAtual} onChange={(e) => setValorAtual(e.target.value)} className="w-24 bg-stone-50 border rounded-xl p-3 text-xs font-bold" />
+                     <button onClick={handleAddPagamento} className="w-12 h-12 bg-stone-900 text-white rounded-xl flex items-center justify-center shadow-md"><Plus /></button>
+                   </div>
+                   <div className="flex flex-col gap-1">
+                     {pagamentos.map((p, i) => (<div key={i} className="flex justify-between items-center bg-stone-50 p-2 rounded-lg text-[10px] font-bold uppercase"><span>{p.metodo}</span><div className="flex items-center gap-2"><span>{formatCurrency(p.valor)}</span><button onClick={() => setPagamentos(pagamentos.filter((_, idx) => idx !== i))} className="text-red-500"><MinusCircle size={14} /></button></div></div>))}
+                   </div>
+                   <div className="bg-stone-900 text-white p-5 rounded-2xl flex justify-between items-center shadow-xl mt-2">
+                     <div className="flex flex-col"><span className="text-[8px] uppercase font-bold opacity-60">{troco > 0 ? 'Troco' : 'Falta'}</span><span className="text-xl font-black">{troco > 0 ? formatCurrency(troco) : formatCurrency(faltaPagar)}</span></div>
+                     <Button onClick={handleFinalizar} disabled={jaPago < totalComTaxa - 0.01} className="!bg-white !text-stone-900">FINALIZAR</Button>
+                   </div>
+                 </>
+               ) : (
+                 <button onClick={() => setShowReview(false)} className="w-full bg-stone-900 text-white p-5 rounded-2xl font-bold uppercase tracking-widest mt-2 shadow-xl">RECEBER AGORA</button>
+               )}
+               <button onClick={() => shareWhatsApp(selectedComanda)} className="w-full py-4 text-[10px] font-black uppercase text-green-600 bg-green-50 rounded-xl flex items-center justify-center gap-2"><MessageCircle size={16} /> ENVIAR PARA O WHATSAPP DO CLIENTE</button>
              </div>
           </div>
         )}
 
-        {/* MODAL DE PIN PARA AUTORIZAÇÃO */}
+        {/* ... (restante dos modais e listagens mantidos) */}
         {showPinModal && (
           <div className="fixed inset-0 bg-stone-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6 animate-in fade-in duration-200">
              <div className="bg-white w-full max-w-xs rounded-3xl p-6 flex flex-col items-center gap-6 shadow-2xl">
                 <div className="w-12 h-12 bg-stone-100 rounded-full flex items-center justify-center text-stone-900"><Lock size={20} /></div>
                 <div className="flex flex-col items-center text-center">
                   <h3 className="text-sm font-black uppercase tracking-widest">Autorização</h3>
-                  <p className="text-[10px] font-bold text-stone-400 uppercase mt-1">Digite o PIN do Gerente para confirmar</p>
+                  <p className="text-[10px] font-bold text-stone-400 uppercase mt-1">Digite o PIN do Gerente</p>
                 </div>
                 <input type="password" value={pinInput} onChange={(e) => setPinInput(e.target.value)} className="w-full bg-stone-50 border rounded-2xl p-4 text-center text-2xl font-black tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-stone-900" autoFocus />
                 <div className="grid grid-cols-2 gap-3 w-full">
-                   <button onClick={() => { setShowPinModal(false); setPendingAction(null); }} className="py-3 text-[10px] font-bold uppercase text-stone-400 bg-stone-50 rounded-xl">Cancelar</button>
-                   <button onClick={verifyPin} className="py-3 text-[10px] font-bold uppercase text-white bg-stone-900 rounded-xl shadow-lg">Confirmar</button>
+                   <button onClick={() => { setShowPinModal(false); setPendingAction(null); }} className="py-3 text-[10px] font-bold uppercase text-stone-400 bg-stone-50 rounded-xl">Sair</button>
+                   <button onClick={verifyPin} className="py-3 text-[10px] font-bold uppercase text-white bg-stone-900 rounded-xl">Confirmar</button>
                 </div>
              </div>
           </div>
         )}
 
-        {/* LISTAGENS... (mantidas) */}
         <div className="flex flex-col gap-4">
           <div className="flex items-center gap-2 px-1"><Receipt size={16} className="text-stone-400" /><h2 className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.3em]">Comandas Ativas</h2></div>
           {comandasAtivas.map(c => (
-            <div key={c.id} className="bistro-card flex flex-col gap-4 border-stone-200">
+            <div key={c.id} onClick={() => handleSelecionarComanda(c, true)} className="bistro-card flex flex-col gap-4 border-stone-200 active:scale-[0.98] transition-all cursor-pointer">
                <div className="flex justify-between items-center">
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-stone-900 text-white flex items-center justify-center font-display font-black text-xl">{c.mesa.numero.toString().padStart(2, '0')}</div>
@@ -237,12 +262,26 @@ export default function CaixaDashboardPage() {
                </div>
                <div className="flex items-center justify-between pt-4 border-t border-stone-50">
                   <div className="flex flex-col"><span className="text-[8px] text-stone-400 uppercase font-bold tracking-widest">Valor Atual</span><span className="text-xl font-black text-stone-900">{formatCurrency(c.total_calculado)}</span></div>
-                  <button onClick={() => handleSelecionarComanda(c)} className="bg-stone-900 text-white px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-widest">FECHAR CONTA</button>
+                  <button onClick={(e) => { e.stopPropagation(); handleSelecionarComanda(c, false); }} className="bg-stone-900 text-white px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-widest shadow-md hover:bg-stone-800">FECHAR CONTA</button>
                </div>
             </div>
           ))}
         </div>
-        {/* ... (histórico de hoje mantido igual) */}
+        {/* ... (Histórico mantido) */}
+        <div className="flex flex-col gap-4 mt-4">
+          <div className="flex items-center gap-2 px-1"><History size={16} className="text-stone-400" /><h2 className="text-[10px] font-bold text-stone-400 uppercase tracking-[0.3em]">Histórico de Hoje</h2></div>
+          <div className="flex flex-col gap-2">
+            {comandasFechadas.map(c => (
+              <div key={c.id} onClick={() => setComandaDetalhes(c)} className="bg-white p-4 rounded-2xl border border-stone-100 flex items-center justify-between active:scale-95 transition-all cursor-pointer">
+                <div className="flex items-center gap-3">
+                   <div className="w-8 h-8 rounded-lg bg-stone-100 text-stone-600 flex items-center justify-center font-bold text-xs">{c.mesa.numero}</div>
+                   <div className="flex flex-col"><span className="text-xs font-bold uppercase">{c.clientes?.nome || 'Mesa Local'}</span><span className="text-[8px] font-bold text-stone-400 uppercase">FECHADA ÀS {new Date(c.fechada_em).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span></div>
+                </div>
+                <div className="flex flex-col items-end"><span className="text-xs font-black text-stone-900">{formatCurrency(c.total_pago)}</span><span className="text-[8px] font-bold text-green-500 uppercase tracking-widest">PAGA</span></div>
+              </div>
+            ))}
+          </div>
+        </div>
       </main>
 
       <BottomNav />

@@ -7,12 +7,14 @@ interface AppHeaderProps {
   title?: string;
   showBack?: boolean;
   showUser?: boolean;
+  backPath?: string; // NOVO: Caminho customizado para voltar
 }
 
 export function AppHeader({ 
   title = "Mangueirão", 
   showBack = false,
-  showUser = true 
+  showUser = true,
+  backPath
 }: AppHeaderProps) {
   const router = useRouter();
   const { user, logout } = useAuthStore();
@@ -24,10 +26,17 @@ export function AppHeader({
     }
   };
 
+  const handleBack = () => {
+    if (backPath) {
+      router.push(backPath);
+    } else {
+      router.back();
+    }
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full bg-white border-b border-stone-200 px-6 py-4">
       <div className="flex flex-col items-center gap-3">
-        {/* Logotipo Centralizado e Limpo */}
         <div className="flex flex-col items-center">
           <img 
             src="/logo.png" 
@@ -38,7 +47,7 @@ export function AppHeader({
 
         <div className="w-full flex items-center justify-between mt-1">
           {showBack ? (
-            <button onClick={() => router.back()} className="p-2 text-stone-400 active:text-stone-900 transition-colors">
+            <button onClick={handleBack} className="p-2 text-stone-400 active:text-stone-900 transition-colors">
               <ArrowLeft size={20} />
             </button>
           ) : (
@@ -58,11 +67,6 @@ export function AppHeader({
                 <span className="text-[7px] font-bold text-stone-400 uppercase tracking-tighter mt-0.5">
                   {user.nivel_acesso === 'admin' ? 'GERENTE' : user.nivel_acesso}
                 </span>
-              </div>
-            )}
-            {showUser && (
-              <div className="w-8 h-8 rounded-full bg-stone-900 text-white flex items-center justify-center text-[11px] font-black border border-stone-800 shadow-sm shrink-0">
-                {user?.nome?.[0] || '?'}
               </div>
             )}
           </div>

@@ -32,7 +32,7 @@ function CardapioContent() {
 
   return (
     <div className="min-h-screen bg-stone-50 pb-32 font-sans">
-      <AppHeader title="Cardápio" showUser={false} showBack={true} />
+      <AppHeader title="Cardápio" showUser={false} showBack={true} backPath="/mesas" />
 
       <main className="flex flex-col gap-4">
         {/* Busca e Categorias Modernas */}
