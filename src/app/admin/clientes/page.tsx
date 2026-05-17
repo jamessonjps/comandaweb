@@ -13,7 +13,6 @@ import {
   Phone, 
   MessageCircle, 
   AlertCircle,
-  MoreVertical,
   Plus,
   XCircle,
   User,
@@ -24,7 +23,8 @@ import {
   Clock,
   ArrowRight,
   TrendingUp,
-  UserCheck
+  UserCheck,
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 
@@ -60,8 +60,8 @@ export default function AdminClientesPage() {
     const { data, error } = await supabase
       .from('clientes')
       .select('*')
+      .eq('ativo', true)
       .order('nome', { ascending: true });
-
     if (!error) setClientes(data || []);
     setIsLoading(false);
   };
@@ -119,6 +119,90 @@ export default function AdminClientesPage() {
 
     fetchHistorico();
   }, [selectedCliente]);
+
+  const handleDeleteCliente = async (id: string, nome: string) => {
+    const pin = prompt('DIGITE O PIN (GERENTE OU ADMIN TI) PARA CONFIRMAR A EXCLUSÃO:');
+    if (!pin) return;
+    if (pin !== '5678' && pin !== '9999') {
+      alert('PIN INCORRETO!');
+      return;
+    }
+
+    if (pin === '9999') {
+      // Admin TI can choose to permanently delete or soft delete
+      const choice = confirm(`VOCÊ ENTROU COMO ADMIN TI.\n\nDeseja EXCLUIR DEFINITIVAMENTE este cliente do banco de dados (inclusive desvinculando comandas)?\n\n[OK] - Excluir Permanente (TI)\n[Cancelar] - Excluir Suave (Mantendo Histórico)`);
+      if (choice) {
+        // Permanent Delete
+        if (confirm(`ATENÇÃO: A exclusão permanente de "${nome.toUpperCase()}" removerá o cliente definitivamente.\nAs comandas associadas terão o cliente desvinculado (cliente_id = null).\n\nConfirma exclusão permanente?`)) {
+          try {
+            // Desvincular comandas primeiro
+            await supabase
+              .from('comandas')
+              .update({ cliente_id: null })
+              .eq('cliente_id', id);
+
+            // Excluir cliente do banco
+            const { error } = await supabase
+              .from('clientes')
+              .delete()
+              .eq('id', id);
+
+            if (error) throw error;
+            alert('CLIENTE EXCLUÍDO DEFINITIVAMENTE COM SUCESSO!');
+            fetchClientes();
+          } catch (err: any) {
+            alert('ERRO AO EXCLUIR DEFINITIVAMENTE: ' + err.message);
+          }
+        }
+        return;
+      }
+    }
+
+    // Soft delete
+    if (confirm(`DESEJA EXCLUIR O CLIENTE "${nome.toUpperCase()}" DA BASE ATIVA?\n\nEle será removido da base de clientes, mas todo o histórico de consumo em comandas anteriores será preservado.`)) {
+      try {
+        const { error } = await supabase
+          .from('clientes')
+          .update({ ativo: false })
+          .eq('id', id);
+        if (error) throw error;
+        alert('CLIENTE EXCLUÍDO DA BASE ATIVA COM SUCESSO!');
+        fetchClientes();
+      } catch (err: any) {
+        alert('ERRO AO EXCLUIR CLIENTE: ' + err.message);
+      }
+    }
+  };
+
+  const handleEditCliente = async (cliente: Cliente) => {
+    const pin = prompt('DIGITE O PIN (GERENTE OU ADMIN TI) PARA EDITAR O CLIENTE:');
+    if (!pin) return;
+    if (pin !== '5678' && pin !== '9999') {
+      alert('PIN INCORRETO!');
+      return;
+    }
+
+    const novoNome = prompt('DIGITE O NOVO NOME DO CLIENTE:', cliente.nome);
+    if (!novoNome) return;
+    const novoTelefone = prompt('DIGITE O NOVO TELEFONE/WHATSAPP DO CLIENTE:', cliente.telefone || '');
+
+    try {
+      const { error } = await supabase
+        .from('clientes')
+        .update({ 
+          nome: novoNome, 
+          telefone: novoTelefone,
+          whatsapp: novoTelefone
+        })
+        .eq('id', cliente.id);
+
+      if (error) throw error;
+      alert('CLIENTE ATUALIZADO COM SUCESSO!');
+      fetchClientes();
+    } catch (err: any) {
+      alert('ERRO AO ATUALIZAR CLIENTE: ' + err.message);
+    }
+  };
 
   const filteredClientes = clientes.filter(c => 
     c.nome.toLowerCase().includes(search.toLowerCase()) ||
@@ -187,8 +271,12 @@ export default function AdminClientesPage() {
                         <Phone size={10} /> {cliente.telefone || 'Sem telefone'}
                       </span>
                     </div>
-                    <button className="p-1 text-stone-300 hover:text-stone-900 transition-colors">
-                      <MoreVertical size={18} />
+                    <button 
+                      onClick={() => handleDeleteCliente(cliente.id, cliente.nome)}
+                      className="p-2 text-stone-300 hover:text-red-600 active:scale-90 transition-all rounded-xl hover:bg-red-50"
+                      title="Excluir Cliente"
+                    >
+                      <Trash2 size={16} />
                     </button>
                   </div>
 
@@ -216,12 +304,19 @@ export default function AdminClientesPage() {
                         </a>
                       )}
                       <button 
+                        onClick={() => handleEditCliente(cliente)}
+                        className="h-10 px-4 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all"
+                      >
+                        Editar
+                      </button>
+                      <button 
                         onClick={() => setSelectedCliente(cliente)}
                         className="h-10 px-5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-sm"
                       >
                         Ver Ficha
                       </button>
                     </div>
+
                   </div>
                 </div>
               );

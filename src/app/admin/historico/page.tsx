@@ -18,12 +18,12 @@ import {
   RotateCcw,
   Lock,
   ChevronRight,
-  Clock
+  Clock,
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useAuthStore } from '@/store/auth.store';
-
 export default function AdminHistoricoPage() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
@@ -129,7 +129,7 @@ export default function AdminHistoricoPage() {
   };
 
   const verifyPin = async () => {
-    if (pinInput === '5678') {
+    if (pinInput === '5678' || pinInput === '9999') {
       try {
         // Reabrir comanda no banco
         await supabase
@@ -151,8 +151,46 @@ export default function AdminHistoricoPage() {
         alert('ERRO AO REABRIR COMANDA: ' + err.message);
       }
     } else {
-      alert('PIN INCORRETO! APENAS O GERENTE PODE AUTORIZAR A REABERTURA.');
+      alert('PIN INCORRETO! APENAS O GERENTE OU ADMIN TI PODEM AUTORIZAR A REABERTURA.');
       setPinInput('');
+    }
+  };
+
+  const handleDeleteComanda = async () => {
+    const pin = prompt('DIGITE A SENHA DE ADMIN TI PARA EXCLUIR ESTA COMANDA DEFINITIVAMENTE:');
+    if (!pin) return;
+    if (pin !== '9999') {
+      alert('SENHA DE ADMIN TI INCORRETA!');
+      return;
+    }
+    if (confirm('ATENÇÃO: VOCÊ ESTÁ PRESTES A EXCLUIR ESTA COMANDA E TODOS OS SEUS ITENS/PAGAMENTOS DEFINITIVAMENTE DO BANCO DE DADOS.\n\nESTA AÇÃO NÃO PODE SER DESFEITA. DESEJA CONTINUAR?')) {
+      try {
+        // Excluir itens pedido
+        await supabase
+          .from('itens_pedido')
+          .delete()
+          .eq('comanda_id', selectedComanda.id);
+
+        // Excluir pagamentos
+        await supabase
+          .from('pagamentos_comanda')
+          .delete()
+          .eq('comanda_id', selectedComanda.id);
+
+        // Excluir a comanda
+        const { error } = await supabase
+          .from('comandas')
+          .delete()
+          .eq('id', selectedComanda.id);
+
+        if (error) throw error;
+        
+        alert('COMANDA E TODOS OS DADOS VINCULADOS EXCLUÍDOS COM SUCESSO!');
+        setSelectedComanda(null);
+        fetchComandas();
+      } catch (err: any) {
+        alert('ERRO AO EXCLUIR COMANDA: ' + err.message);
+      }
     }
   };
 
@@ -384,6 +422,12 @@ export default function AdminHistoricoPage() {
                 className="w-full bg-stone-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 text-xs"
               >
                 <RotateCcw size={16} /> REABRIR COMANDA (REQUER PIN)
+              </button>
+              <button 
+                onClick={handleDeleteComanda} 
+                className="w-full bg-red-600 hover:bg-red-700 text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 text-xs"
+              >
+                <Trash2 size={16} /> EXCLUIR COMANDA DEFINITIVAMENTE (TI)
               </button>
             </div>
           </div>
