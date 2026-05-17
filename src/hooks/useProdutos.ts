@@ -35,10 +35,18 @@ export function useProdutos() {
           categoria: p.categorias?.nome || 'Sem Categoria'
         })) as Produto[];
 
-        setProdutos(mappedData);
+        // Filtrar produtos com estoque esgotado (estoque_atual <= 0)
+        // Se estoque_atual for nulo ou indefinido, considera disponível (sem controle de estoque)
+        const activeProdutos = mappedData.filter(p => 
+          p.estoque_atual === null || 
+          p.estoque_atual === undefined || 
+          p.estoque_atual > 0
+        );
+
+        setProdutos(activeProdutos);
         
-        // Extrair categorias únicas
-        const uniqueCats = Array.from(new Set(mappedData.map(p => p.categoria)));
+        // Extrair categorias únicas de produtos ativos
+        const uniqueCats = Array.from(new Set(activeProdutos.map(p => p.categoria)));
         setCategorias(uniqueCats as string[]);
       } catch (err) {
         console.error('Erro ao carregar produtos:', err);

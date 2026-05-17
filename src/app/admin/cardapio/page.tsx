@@ -125,7 +125,25 @@ export default function AdminCardapioPage() {
     }
   };
 
+  const getProductSeverity = (p: Produto) => {
+    if (p.estoque_atual <= 0) return 0; // Esgotado
+    if (p.estoque_atual <= 5) return 1; // Crítico
+    return 2; // Normal
+  };
+
   const filteredProdutos = produtos.filter(p => p.nome.toLowerCase().includes(search.toLowerCase()));
+
+  const sortedProdutos = [...filteredProdutos].sort((a, b) => {
+    if (viewMode === 'estoque') {
+      const severityA = getProductSeverity(a);
+      const severityB = getProductSeverity(b);
+      if (severityA !== severityB) {
+        return severityA - severityB;
+      }
+      return a.estoque_atual - b.estoque_atual;
+    }
+    return 0;
+  });
 
   return (
     <div className="min-h-screen bg-stone-50 pb-32 font-sans">
@@ -166,10 +184,11 @@ export default function AdminCardapioPage() {
           {isLoading ? (
             <div className="py-20 flex justify-center"><div className="w-10 h-10 border-4 border-stone-900 border-t-transparent rounded-full animate-spin" /></div>
           ) : (
-            filteredProdutos.map((p) => {
+            sortedProdutos.map((p) => {
               if (viewMode === 'estoque') {
+                const stockPercentage = Math.min(100, Math.max(0, (p.estoque_atual / 50) * 100));
                 return (
-                  <div key={p.id} className="bistro-card flex flex-col gap-4 border-stone-200">
+                  <div key={p.id} className="bistro-card flex flex-col gap-4 border-stone-200 animate-in fade-in duration-300">
                     <div className="flex justify-between items-center">
                       <div className="flex flex-col">
                         <span className="text-sm font-black text-stone-900 uppercase">{p.nome}</span>
@@ -177,11 +196,43 @@ export default function AdminCardapioPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mr-1">Estoque:</span>
-                        <span className={`text-sm font-black ${p.estoque_atual <= 5 ? 'text-amber-600' : 'text-stone-900'}`}>{p.estoque_atual} un</span>
+                        <span className={`text-sm font-black ${p.estoque_atual <= 0 ? 'text-red-600 font-extrabold animate-pulse' : p.estoque_atual <= 5 ? 'text-amber-600 font-bold animate-pulse' : 'text-emerald-700'}`}>{p.estoque_atual} un</span>
+                      </div>
+                    </div>
+
+                    {/* Barra de Estoque Visual Premium */}
+                    <div className="flex flex-col gap-1.5 w-full bg-stone-50 p-3 rounded-2xl border border-stone-100">
+                      <div className="flex justify-between items-center text-[9px] font-black uppercase tracking-wider">
+                        <span className="text-stone-400">Nível de Abastecimento</span>
+                        <span className={
+                          p.estoque_atual <= 0 ? 'text-red-500 font-black' :
+                          p.estoque_atual <= 5 ? 'text-amber-500 font-black' :
+                          'text-emerald-600 font-black'
+                        }>
+                          {p.estoque_atual <= 0 ? 'ESGOTADO 🚨' :
+                           p.estoque_atual <= 5 ? 'CRÍTICO ⚠️' :
+                           'ABASTECIDO ✨'}
+                        </span>
+                      </div>
+                      <div className="w-full h-2.5 bg-stone-200/60 rounded-full overflow-hidden relative shadow-inner">
+                        <div 
+                          className={`h-full rounded-full transition-all duration-500 shadow-sm
+                            ${p.estoque_atual <= 0 
+                              ? 'bg-red-500 w-0' 
+                              : p.estoque_atual <= 5 
+                                ? 'bg-gradient-to-r from-amber-500 to-orange-400' 
+                                : 'bg-gradient-to-r from-emerald-500 to-teal-400'}`}
+                          style={{ width: `${stockPercentage}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between items-center text-[8px] font-bold text-stone-400">
+                        <span>CRÍTICO (0-5 un)</span>
+                        <span className="text-stone-700">{p.estoque_atual} / 50 un</span>
+                        <span>CHEIO (50+ un)</span>
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-4 gap-2 pt-4 border-t border-stone-50">
+                    <div className="grid grid-cols-4 gap-2 pt-2 border-t border-stone-50">
                       <button 
                         type="button"
                         onClick={() => handleQuickStockUpdate(p.id, -5)} 

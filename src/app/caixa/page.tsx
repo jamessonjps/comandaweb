@@ -412,7 +412,19 @@ export default function CaixaDashboardPage() {
                    </div>
                  </>
                ) : (
-                 <button onClick={() => setShowReview(false)} className="w-full bg-stone-900 text-white p-5 rounded-2xl font-bold uppercase tracking-widest mt-2 shadow-xl">RECEBER AGORA</button>
+                  <button 
+                    onClick={() => {
+                      if (!activeShift) {
+                        alert('ABRA O CAIXA PRIMEIRO PARA PODER REALIZAR O RECEBIMENTO FINANCEIRO!');
+                        return;
+                      }
+                      setShowReview(false);
+                    }} 
+                    className={`w-full p-5 rounded-2xl font-bold uppercase tracking-widest mt-2 shadow-xl transition-all
+                      ${activeShift ? 'bg-stone-900 text-white hover:bg-stone-850' : 'bg-stone-200 text-stone-400 cursor-not-allowed shadow-none'}`}
+                  >
+                    {activeShift ? 'RECEBER AGORA' : 'CAIXA FECHADO (APENAS LEITURA)'}
+                  </button>
                )}
                <button onClick={() => shareWhatsApp(selectedComanda)} className="w-full py-4 text-[10px] font-black uppercase text-green-600 bg-green-50 rounded-xl flex items-center justify-center gap-2"><MessageCircle size={16} /> ENVIAR PARA O WHATSAPP DO CLIENTE</button>
              </div>
@@ -445,18 +457,14 @@ export default function CaixaDashboardPage() {
               <div 
                 key={c.id} 
                 onClick={() => {
-                  if (!activeShift) {
-                    alert('ABRA O CAIXA PRIMEIRO PARA PODER AVALIAR O CONSUMO!');
-                    return;
-                  }
                   handleSelecionarComanda(c, true);
                 }} 
-                className={`bistro-card flex flex-col gap-4 border-stone-200 active:scale-[0.98] transition-all cursor-pointer ${!activeShift ? 'opacity-65' : ''}`}
+                className="bistro-card flex flex-col gap-4 border-stone-200 active:scale-[0.98] transition-all cursor-pointer"
               >
                  <div className="flex justify-between items-center">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-stone-900 text-white flex items-center justify-center font-display font-black text-xl">{c.mesa?.numero?.toString().padStart(2, '0') || 'S/M'}</div>
-                      <div className="flex flex-col"><span className="text-sm font-bold text-stone-900 uppercase">{c.clientes?.nome || 'Mesa Local'}</span><span className="text-[9px] text-stone-400 font-bold uppercase">{new Date(c.aberta_em).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span></div>
+                       <div className="w-12 h-12 rounded-2xl bg-stone-900 text-white flex items-center justify-center font-display font-black text-xl">{c.mesa?.numero?.toString().padStart(2, '0') || 'S/M'}</div>
+                       <div className="flex flex-col"><span className="text-sm font-bold text-stone-900 uppercase">{c.clientes?.nome || 'Mesa Local'}</span><span className="text-[9px] text-stone-400 font-bold uppercase">{new Date(c.aberta_em).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span></div>
                     </div>
                     <Badge variant={c.status === 'fechando' ? 'warning' : 'default'}>{c.status === 'fechando' ? 'SOLIC. FECHAMENTO' : 'ABERTA'}</Badge>
                  </div>

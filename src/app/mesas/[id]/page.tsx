@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { 
   Plus, 
@@ -45,6 +45,50 @@ export default function ComandaDetalhesPage() {
   const [metodoAtual, setMetodoAtual] = useState('dinheiro');
   const [valorAtual, setValorAtual] = useState('');
   const [useTaxa, setUseTaxa] = useState(true);
+
+  // Estados Adicionais
+  const [activeShift, setActiveShift] = useState<any>(null);
+  const [isShiftLoading, setIsShiftLoading] = useState(true);
+  const [sugestoesClientes, setSugestoesClientes] = useState<any[]>([]);
+  const [selectedClienteId, setSelectedClienteId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const checkActiveShift = async () => {
+      try {
+        const { data } = await supabase
+          .from('turnos_caixa')
+          .select('*')
+          .eq('status', 'aberto')
+          .limit(1)
+          .maybeSingle();
+        setActiveShift(data || null);
+      } catch (err) {
+        console.error('Erro ao verificar caixa:', err);
+      } finally {
+        setIsShiftLoading(false);
+      }
+    };
+    checkActiveShift();
+  }, []);
+
+  useEffect(() => {
+    if (clienteNome.trim().length < 2) {
+      setSugestoesClientes([]);
+      return;
+    }
+    const searchClients = async () => {
+      const { data } = await supabase
+        .from('clientes')
+        .select('*')
+        .ilike('nome', `%${clienteNome}%`)
+        .limit(5);
+      setSugestoesClientes((data || []).filter(c => c.nome !== clienteNome));
+    };
+    const delayDebounce = setTimeout(() => {
+      searchClients();
+    }, 300);
+    return () => clearTimeout(delayDebounce);
+  }, [clienteNome]);
 
   const totalComTaxa = (comanda?.total_calculado || 0) * (useTaxa ? 1.1 : 1);
   const jaPago = pagamentos.reduce((acc, p) => acc + p.valor, 0);
@@ -96,10 +140,11 @@ export default function ComandaDetalhesPage() {
 
   const handleAbrirMesa = async () => {
     if (!user) { alert('REFAÇA O LOGIN.'); return; }
+    if (!activeShift) { alert('O CAIXA ESTÁ FECHADO! ABRA O CAIXA PRIMEIRO.'); return; }
     setIsActionLoading(true);
     try {
-      let clienteId = null;
-      if (clienteNome.trim()) {
+      let clienteId = selectedClienteId;
+      if (!clienteId && clienteNome.trim()) {
         const { data: cliente } = await supabase.from('clientes').insert({ nome: clienteNome, telefone: clienteTelefone, whatsapp: clienteTelefone }).select().maybeSingle();
         if (cliente) clienteId = cliente.id;
       }
@@ -222,26 +267,83 @@ export default function ComandaDetalhesPage() {
           </div>
         </div>
       )}
-
       <main className="px-6 py-4 flex flex-col gap-6">
         {!comanda ? (
-          <div className="bistro-card flex flex-col gap-4">
+          <div className="bistro-card flex flex-col gap-4 animate-in fade-in duration-300">
             <span className="text-stone-400 text-[10px] font-bold uppercase tracking-widest text-center">Abrir Atendimento</span>
             <div className="flex flex-col gap-3">
-              <div className="relative"><User className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-300" size={16} /><input type="text" placeholder="Nome do Cliente (Opcional)" value={clienteNome} onChange={(e) => setClienteNome(e.target.value)} className="w-full bg-stone-50 border border-stone-100 rounded-xl py-3 pl-10 pr-4 text-sm" /></div>
-              <div className="relative"><Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-300" size={16} /><input type="text" placeholder="WhatsApp (DDD + Número) Opcional" value={clienteTelefone} onChange={(e) => setClienteTelefone(e.target.value)} className="w-full bg-stone-50 border border-stone-100 rounded-xl py-3 pl-10 pr-4 text-sm" /></div>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-300" size={16} />
+                <input 
+                  type="text" 
+                  placeholder="Nome do Cliente (Opcional)" 
+                  value={clienteNome} 
+                  onChange={(e) => {
+                    setClienteNome(e.target.value);
+                    setSelectedClienteId(null);
+                  }} 
+                  className="w-full bg-stone-50 border border-stone-100 rounded-xl py-3 pl-10 pr-4 text-sm font-medium focus:outline-none shadow-sm" 
+                />
+                {sugestoesClientes.length > 0 && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-stone-200 rounded-xl shadow-lg z-50 max-h-40 overflow-y-auto divide-y divide-stone-100">
+                    {sugestoesClientes.map((c) => (
+                      <div 
+                        key={c.id} 
+                        onClick={() => {
+                          setClienteNome(c.nome);
+                          setClienteTelefone(c.telefone || '');
+                          setSelectedClienteId(c.id);
+                          setSugestoesClientes([]);
+                        }}
+                        className="px-4 py-3 text-xs text-stone-700 hover:bg-stone-50 cursor-pointer font-bold uppercase flex justify-between items-center"
+                      >
+                        <span>{c.nome}</span>
+                        <span className="text-[9px] text-stone-400 normal-case">{c.telefone || 'Sem Tel'}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-300" size={16} />
+                <input 
+                  type="text" 
+                  placeholder="WhatsApp (DDD + Número) Opcional" 
+                  value={clienteTelefone} 
+                  onChange={(e) => setClienteTelefone(e.target.value)} 
+                  className="w-full bg-stone-50 border border-stone-100 rounded-xl py-3 pl-10 pr-4 text-sm font-medium focus:outline-none shadow-sm" 
+                />
+              </div>
             </div>
             
-            <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl flex items-start gap-3">
-               <AlertCircle size={16} className="text-amber-600 mt-1" />
-               <p className="text-[9px] font-bold text-amber-700 uppercase leading-relaxed">Dica: Cadastre o WhatsApp para enviar o extrato da conta direto para o celular do cliente.</p>
-            </div>
+            {!activeShift && !isShiftLoading ? (
+              <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-3">
+                 <AlertCircle size={18} className="text-red-600 mt-0.5 animate-pulse" />
+                 <div className="flex flex-col">
+                   <span className="text-[10px] font-black text-red-800 uppercase">Caixa Fechado</span>
+                   <p className="text-[9px] font-bold text-red-700 uppercase leading-relaxed mt-0.5">
+                     O caixa geral está fechado no momento. Solicite a abertura do caixa no painel de finanças para poder iniciar atendimentos.
+                   </p>
+                 </div>
+              </div>
+            ) : (
+              <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl flex items-start gap-3">
+                 <AlertCircle size={16} className="text-amber-600 mt-1" />
+                 <p className="text-[9px] font-bold text-amber-700 uppercase leading-relaxed">Dica: Cadastre o WhatsApp para enviar o extrato da conta direto para o celular do cliente.</p>
+              </div>
+            )}
 
-            <button onClick={handleAbrirMesa} disabled={isActionLoading} className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold uppercase tracking-widest">{isActionLoading ? 'INICIANDO...' : 'INICIAR ATENDIMENTO'}</button>
+            <button 
+              onClick={handleAbrirMesa} 
+              disabled={isActionLoading || (!activeShift && !isShiftLoading)} 
+              className={`w-full py-4 rounded-xl font-bold uppercase tracking-widest text-white transition-all
+                ${(!activeShift && !isShiftLoading) ? 'bg-stone-300 cursor-not-allowed shadow-none' : 'bg-stone-900 shadow-md active:scale-95'}`}
+            >
+              {isActionLoading ? 'INICIANDO...' : 'INICIAR ATENDIMENTO'}
+            </button>
           </div>
         ) : (
-          <div className="bistro-card flex flex-col gap-4">
-            <div className="flex justify-between items-center">
+          <div className="bistro-card flex flex-col gap-4 animate-in fade-in duration-300">            <div className="flex justify-between items-center">
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-2 text-stone-400 text-[10px] font-bold uppercase tracking-widest"><Clock size={12} /><span>{formatElapsedTime(comanda.aberta_em)}</span></div>
                 <div className="text-3xl font-black text-stone-900 tracking-tighter">{formatCurrency(comanda.total_calculado)}</div>
