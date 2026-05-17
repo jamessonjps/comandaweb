@@ -63,9 +63,10 @@ export function AppHeader({
           <div className="w-14 flex justify-end items-center gap-2">
             {showUser && user && (
               <div className="flex flex-col items-end">
-                <span className="text-[8px] font-black text-stone-900 uppercase leading-none">{user.nome.split(' ')[0]}</span>
-                <span className="text-[7px] font-bold text-stone-400 uppercase tracking-tighter mt-0.5">
-                  {user.nivel_acesso === 'admin' ? 'GERENTE' : user.nivel_acesso}
+                <span className="text-[9px] font-black text-stone-900 uppercase leading-none">{user.nome}</span>
+                <span className="text-[7px] font-bold text-stone-400 uppercase tracking-wider mt-1">
+                  {user.nivel_acesso?.toLowerCase() === 'garcom' ? 'GARÇOM' :
+                   user.nivel_acesso?.toLowerCase() === 'caixa' ? 'CAIXA' : 'GERENTE'}
                 </span>
               </div>
             )}
