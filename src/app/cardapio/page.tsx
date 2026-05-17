@@ -76,7 +76,9 @@ function CardapioContent() {
           ) : filteredProdutos.length > 0 ? (
             filteredProdutos.map(produto => {
               const itemNoCarrinho = itensCarrinho.find(i => i.produto_id === produto.id);
-              const isEsgotado = produto.estoque_atual === 0;
+              const estoqueDisponivel = produto.estoque_atual ?? 0;
+              const isEsgotado = estoqueDisponivel <= 0;
+              const atingiuLimite = itemNoCarrinho && itemNoCarrinho.quantidade >= estoqueDisponivel;
               
               return (
                 <div key={produto.id} className={`bistro-card flex items-center justify-between gap-4 ${isEsgotado ? 'opacity-60' : ''}`}>
@@ -87,7 +89,14 @@ function CardapioContent() {
                         <span className="text-[10px] font-bold text-stone-400">{produto.volume_ml}ml</span>
                       )}
                     </div>
-                    <span className="text-sm font-black text-stone-900 mt-1">{formatCurrency(produto.preco)}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-black text-stone-900">{formatCurrency(produto.preco)}</span>
+                      {produto.estoque_atual !== undefined && (
+                        <span className={`text-[10px] font-bold uppercase tracking-wider ${produto.estoque_atual <= 5 ? 'text-amber-600 animate-pulse' : 'text-stone-400'}`}>
+                          Estoque: {produto.estoque_atual} un
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {isEsgotado ? (
@@ -95,20 +104,32 @@ function CardapioContent() {
                       Esgotado
                     </span>
                   ) : itemNoCarrinho ? (
-                    <div className="flex items-center gap-4 bg-stone-50 rounded-xl px-2 py-1 border border-stone-100">
-                      <button 
-                        onClick={() => atualizarQuantidade(produto.id, -1)}
-                        className="w-8 h-8 flex items-center justify-center text-stone-900 active:scale-90 transition-transform"
-                      >
-                        <Minus size={16} strokeWidth={3} />
-                      </button>
-                      <span className="text-sm font-black w-4 text-center text-stone-900">{itemNoCarrinho.quantidade}</span>
-                      <button 
-                        onClick={() => atualizarQuantidade(produto.id, 1)}
-                        className="w-8 h-8 flex items-center justify-center text-stone-900 active:scale-90 transition-transform"
-                      >
-                        <Plus size={16} strokeWidth={3} />
-                      </button>
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="flex items-center gap-4 bg-stone-50 rounded-xl px-2 py-1 border border-stone-100">
+                        <button 
+                          onClick={() => atualizarQuantidade(produto.id, -1)}
+                          className="w-8 h-8 flex items-center justify-center text-stone-900 active:scale-90 transition-transform"
+                        >
+                          <Minus size={16} strokeWidth={3} />
+                        </button>
+                        <span className="text-sm font-black w-4 text-center text-stone-900">{itemNoCarrinho.quantidade}</span>
+                        <button 
+                          onClick={() => {
+                            if (atingiuLimite) {
+                              alert(`Desculpe, só temos ${estoqueDisponivel} unidades de "${produto.nome}" em estoque.`);
+                              return;
+                            }
+                            atualizarQuantidade(produto.id, 1);
+                          }}
+                          disabled={atingiuLimite}
+                          className={`w-8 h-8 flex items-center justify-center transition-all ${atingiuLimite ? 'text-stone-300 cursor-not-allowed' : 'text-stone-900 active:scale-90 transition-transform'}`}
+                        >
+                          <Plus size={16} strokeWidth={3} />
+                        </button>
+                      </div>
+                      {atingiuLimite && (
+                        <span className="text-[8px] font-bold text-amber-600 uppercase tracking-widest animate-pulse">Lim. Atingido</span>
+                      )}
                     </div>
                   ) : (
                     <button 

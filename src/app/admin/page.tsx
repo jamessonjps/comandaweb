@@ -13,7 +13,8 @@ import {
   UserPlus, 
   BarChart3, 
   ChevronRight,
-  BookUser
+  BookUser,
+  History
 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
@@ -38,6 +39,13 @@ export default function AdminDashboardPage() {
       icon: BarChart3,
       path: "/admin/dashboard",
       color: "bg-blue-50 text-blue-600"
+    },
+    {
+      title: "Histórico de Vendas",
+      description: "Histórico de comandas e atendimentos",
+      icon: History,
+      path: "/admin/historico",
+      color: "bg-stone-200 text-stone-700"
     },
     {
       title: "Funcionários",

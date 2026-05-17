@@ -34,7 +34,7 @@ export default function AdminClientesPage() {
   const [search, setSearch] = useState('');
 
   // Proteção de rota
-  if (!user || user.nivel_acesso !== 'admin') {
+  if (!user || (user.nivel_acesso !== 'admin' && user.nivel_acesso !== 'GERENTE')) {
     router.push('/mesas');
     return null;
   }

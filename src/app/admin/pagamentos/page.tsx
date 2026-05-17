@@ -29,7 +29,7 @@ export default function AdminPagamentosPage() {
     fiado: false
   });
 
-  if (!user || user.nivel_acesso !== 'admin') {
+  if (!user || (user.nivel_acesso !== 'admin' && user.nivel_acesso !== 'GERENTE')) {
     router.push('/mesas');
     return null;
   }

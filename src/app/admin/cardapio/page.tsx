@@ -41,6 +41,7 @@ export default function AdminCardapioPage() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<'cardapio' | 'estoque'>('cardapio');
   
   // Estados para Modal
   const [showModal, setShowModal] = useState(false);
@@ -105,6 +106,25 @@ export default function AdminCardapioPage() {
     }
   };
 
+  const handleQuickStockUpdate = async (id: string, delta: number) => {
+    const prod = produtos.find(p => p.id === id);
+    if (!prod) return;
+    const newStock = Math.max(0, prod.estoque_atual + delta);
+    
+    // Otimista
+    setProdutos(prev => prev.map(p => p.id === id ? { ...p, estoque_atual: newStock } : p));
+    
+    const { error } = await supabase
+      .from('produtos')
+      .update({ estoque_atual: newStock })
+      .eq('id', id);
+      
+    if (error) {
+      alert('ERRO AO ATUALIZAR ESTOQUE: ' + error.message);
+      fetchData();
+    }
+  };
+
   const filteredProdutos = produtos.filter(p => p.nome.toLowerCase().includes(search.toLowerCase()));
 
   return (
@@ -124,28 +144,97 @@ export default function AdminCardapioPage() {
           <input type="text" placeholder="Buscar no cardápio..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-white border border-stone-100 rounded-xl py-3 pl-12 pr-4 text-sm focus:outline-none shadow-sm" />
         </div>
 
+        {/* Seletor de Modo de Visualização */}
+        <div className="flex bg-stone-100 p-1 rounded-xl shadow-inner border border-stone-200">
+          <button 
+            type="button"
+            onClick={() => setViewMode('cardapio')} 
+            className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all ${viewMode === 'cardapio' ? 'bg-white text-stone-900 shadow-sm font-black' : 'text-stone-400 hover:text-stone-900'}`}
+          >
+            Editar Itens
+          </button>
+          <button 
+            type="button"
+            onClick={() => setViewMode('estoque')} 
+            className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all ${viewMode === 'estoque' ? 'bg-white text-stone-900 shadow-sm font-black' : 'text-stone-400 hover:text-stone-900'}`}
+          >
+            Ajustar Estoque
+          </button>
+        </div>
+
         <div className="flex flex-col gap-4">
           {isLoading ? (
             <div className="py-20 flex justify-center"><div className="w-10 h-10 border-4 border-stone-900 border-t-transparent rounded-full animate-spin" /></div>
           ) : (
-            filteredProdutos.map((p) => (
-              <div key={p.id} className="bistro-card flex flex-col gap-4 border-stone-200">
-                <div className="flex justify-between items-start">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-black text-stone-900 uppercase">{p.nome}</span>
-                    <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">{p.categorias?.nome || 'S/ CAT'} • {p.volume_ml}ml</span>
+            filteredProdutos.map((p) => {
+              if (viewMode === 'estoque') {
+                return (
+                  <div key={p.id} className="bistro-card flex flex-col gap-4 border-stone-200">
+                    <div className="flex justify-between items-center">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-black text-stone-900 uppercase">{p.nome}</span>
+                        <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">{p.categorias?.nome || 'S/ CAT'} • {p.volume_ml}ml</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mr-1">Estoque:</span>
+                        <span className={`text-sm font-black ${p.estoque_atual <= 5 ? 'text-amber-600' : 'text-stone-900'}`}>{p.estoque_atual} un</span>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-4 gap-2 pt-4 border-t border-stone-50">
+                      <button 
+                        type="button"
+                        onClick={() => handleQuickStockUpdate(p.id, -5)} 
+                        className="bg-stone-100 hover:bg-stone-200 active:scale-95 text-stone-700 font-bold py-2 rounded-xl text-xs transition-all"
+                      >
+                        -5
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => handleQuickStockUpdate(p.id, -1)} 
+                        className="bg-stone-100 hover:bg-stone-200 active:scale-95 text-stone-700 font-bold py-2 rounded-xl text-xs transition-all"
+                      >
+                        -1
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => handleQuickStockUpdate(p.id, 1)} 
+                        className="bg-stone-900 hover:bg-stone-800 active:scale-95 text-white font-bold py-2 rounded-xl text-xs transition-all"
+                      >
+                        +1
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => handleQuickStockUpdate(p.id, 5)} 
+                        className="bg-stone-900 hover:bg-stone-800 active:scale-95 text-white font-bold py-2 rounded-xl text-xs transition-all"
+                      >
+                        +5
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <button onClick={() => { setEditingProduto(p); setShowModal(true); }} className="w-9 h-9 rounded-lg bg-stone-50 text-stone-600 flex items-center justify-center"><Edit3 size={16} /></button>
-                    <button onClick={() => handleDelete(p.id)} className="w-9 h-9 rounded-lg bg-red-50 text-red-600 flex items-center justify-center"><Trash2 size={16} /></button>
+                );
+              }
+
+              // viewMode === 'cardapio'
+              return (
+                <div key={p.id} className="bistro-card flex flex-col gap-4 border-stone-200">
+                  <div className="flex justify-between items-start">
+                    <div className="flex flex-col">
+                      <span className="text-sm font-black text-stone-900 uppercase">{p.nome}</span>
+                      <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">{p.categorias?.nome || 'S/ CAT'} • {p.volume_ml}ml</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => { setEditingProduto(p); setShowModal(true); }} className="w-9 h-9 rounded-lg bg-stone-50 text-stone-600 flex items-center justify-center"><Edit3 size={16} /></button>
+                      <button onClick={() => handleDelete(p.id)} className="w-9 h-9 rounded-lg bg-red-50 text-red-600 flex items-center justify-center"><Trash2 size={16} /></button>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-end pt-4 border-t border-stone-50">
+                    <div className="flex flex-col"><span className="text-[8px] text-stone-400 uppercase font-bold tracking-widest">Preço</span><span className="text-lg font-black text-stone-900">{formatCurrency(p.preco)}</span></div>
+                    <div className="flex flex-col items-end"><span className="text-[8px] text-stone-400 uppercase font-bold tracking-widest">Estoque</span><span className={`text-sm font-black ${p.estoque_atual <= 5 ? 'text-amber-600' : 'text-stone-900'}`}>{p.estoque_atual} un</span></div>
                   </div>
                 </div>
-                <div className="flex justify-between items-end pt-4 border-t border-stone-50">
-                  <div className="flex flex-col"><span className="text-[8px] text-stone-400 uppercase font-bold tracking-widest">Preço</span><span className="text-lg font-black text-stone-900">{formatCurrency(p.preco)}</span></div>
-                  <div className="flex flex-col items-end"><span className="text-[8px] text-stone-400 uppercase font-bold tracking-widest">Estoque</span><span className={`text-sm font-black ${p.estoque_atual <= 5 ? 'text-amber-600' : 'text-stone-900'}`}>{p.estoque_atual} un</span></div>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </main>
