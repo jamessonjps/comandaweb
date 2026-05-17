@@ -68,13 +68,7 @@ export default function AdminDashboardPage() {
       path: "/admin/clientes",
       color: "bg-emerald-50 text-emerald-600"
     },
-    {
-      title: "Pagamentos",
-      description: "Configurar PIX, Cartão e Dinheiro",
-      icon: CreditCard,
-      path: "/admin/pagamentos",
-      color: "bg-red-50 text-red-600"
-    },
+
     {
       title: "Horários",
       description: "Funcionamento do estabelecimento",

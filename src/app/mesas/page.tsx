@@ -23,7 +23,6 @@ function MesasContent() {
 
   const [activeShift, setActiveShift] = useState<any>(null);
   const [isShiftLoading, setIsShiftLoading] = useState(true);
-
   // Consultar estado ativo do caixa
   useEffect(() => {
     const checkActiveShift = async () => {
@@ -34,7 +33,22 @@ function MesasContent() {
           .eq('status', 'aberto')
           .limit(1)
           .maybeSingle();
-        setActiveShift(data || null);
+        
+        if (data) {
+          // Fetch the operator name from 'perfis'
+          const { data: perfilData } = await supabase
+            .from('perfis')
+            .select('nome')
+            .eq('id', data.aberto_por)
+            .maybeSingle();
+
+          setActiveShift({
+            ...data,
+            operador_nome: perfilData?.nome || 'Gerente / Admin'
+          });
+        } else {
+          setActiveShift(null);
+        }
       } catch (err) {
         console.error('Erro ao verificar caixa:', err);
       } finally {
@@ -43,7 +57,6 @@ function MesasContent() {
     };
     checkActiveShift();
   }, []);
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center">
@@ -75,9 +88,8 @@ function MesasContent() {
                 </span>
                 <span className="text-[8px] font-bold uppercase opacity-80">
                   {activeShift 
-                    ? `Operador: ${activeShift.aberto_por || 'Sistema'} | Aberto às ${new Date(activeShift.aberto_em).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}` 
-                    : 'Abertura de atendimentos temporariamente bloqueada'}
-                </span>
+                    ? `Operador: ${activeShift.operador_nome || activeShift.aberto_por || 'Sistema'} | Aberto às ${new Date(activeShift.aberto_em).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}` 
+                    : 'Abertura de atendimentos temporariamente bloqueada'}                </span>
               </div>
             </div>
             <span className="text-[8px] font-black uppercase px-2 py-1 bg-white rounded-lg shadow-sm border border-stone-100 tracking-widest">

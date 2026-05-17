@@ -97,7 +97,6 @@ export default function AdminUsuariosPage() {
                 <option value="garcom">GARÇOM</option>
                 <option value="caixa">CAIXA</option>
                 <option value="GERENTE">GERENTE</option>
-                <option value="admin">ADMIN (TI)</option>
               </select>
             </div>
             <button onClick={handleSaveEdit} className="w-full bg-white text-stone-900 p-4 rounded-xl text-xs font-black uppercase tracking-[0.2em] mt-2 flex items-center justify-center gap-2">
